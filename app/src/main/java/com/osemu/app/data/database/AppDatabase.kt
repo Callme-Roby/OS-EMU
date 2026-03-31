@@ -12,7 +12,7 @@ import com.osemu.app.data.model.SaveState
 @Database(
     entities = [Game::class, SaveState::class],
     version = 1,
-    exportSchema = true
+    exportSchema = false
 )
 @TypeConverters(GameConverters::class)
 abstract class AppDatabase : RoomDatabase() {
