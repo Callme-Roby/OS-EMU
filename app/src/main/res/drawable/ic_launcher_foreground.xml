@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Game controller body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30 C40,30 30,38 28,48 L26,58 C24,66 28,74 36,76 C40,77 44,75 46,72 L48,68 C49,66 51,65 54,65 C57,65 59,66 60,68 L62,72 C64,75 68,77 72,76 C80,74 84,66 82,58 L80,48 C78,38 68,30 54,30 Z"/>
+
+    <!-- D-pad -->
+    <path
+        android:fillColor="#4FC3F7"
+        android:pathData="M40,50 L43,50 L43,47 L45,47 L45,50 L48,50 L48,52 L45,52 L45,55 L43,55 L43,52 L40,52 Z"/>
+
+    <!-- Buttons -->
+    <path
+        android:fillColor="#FF6B9D"
+        android:pathData="M64,49 a2.5,2.5 0 1,1 5,0 a2.5,2.5 0 1,1 -5,0"/>
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M60,54 a2.5,2.5 0 1,1 5,0 a2.5,2.5 0 1,1 -5,0"/>
+
+    <!-- Text "EMU" -->
+    <path
+        android:fillColor="#37474F"
+        android:pathData="M44,38 L46,38 L46,39 L45,39 L45,40 L46,40 L46,41 L44,41 Z M47,38 L48,38 L48.5,39.5 L49,38 L50,38 L50,41 L49,41 L49,39.5 L48.5,40.5 L48,39.5 L48,41 L47,41 Z M51,38 L53,38 L53,40 C53,40.5 52.5,41 52,41 C51.5,41 51,40.5 51,40 Z"/>
+</vector>
