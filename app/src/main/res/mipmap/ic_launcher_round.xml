@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <!-- Fallback round icon: blue circle with controller shape -->
+    <path
+        android:fillColor="#4FC3F7"
+        android:pathData="M24,0 A24,24 0 1,1 24,48 A24,24 0 1,1 24,0 Z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,12 C18,12 14,16 13,20 L12,25 C11,29 13,33 17,34 C19,34.5 21,33.5 22,32 L23,30 C23.5,29 24,28.5 24,28.5 C24,28.5 24.5,29 25,30 L26,32 C27,33.5 29,34.5 31,34 C35,33 37,29 36,25 L35,20 C34,16 30,12 24,12 Z"/>
+</vector>
