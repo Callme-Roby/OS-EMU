@@ -49,23 +49,49 @@ jobs:
         echo ""
         echo "=== Searching for ANY mipmap reference in entire project ==="
         grep -rn "mipmap" app/ || echo "CONFIRMED: Zero mipmap references found"
-        echo ""
-        echo "=== Searching for ic_launcher references ==="
-        grep -rn "ic_launcher" app/ || echo "No ic_launcher references"
 
     - name: Clean and Build Debug APK
-      run: ./gradlew clean assembleDebug --no-daemon --no-build-cache --stacktrace
+      run: |
+        ./gradlew clean assembleDebug --no-daemon --no-build-cache --stacktrace 2>&1 | tee build-output.log
+        exit ${PIPESTATUS[0]}
+
+    - name: Show errors on failure
+      if: failure()
+      run: |
+        echo "============================================"
+        echo "=== COMPILATION ERRORS (filtered) ==="
+        echo "============================================"
+        grep -i "error" build-output.log | head -50 || true
+        echo ""
+        echo "============================================"
+        echo "=== LINES WITH 'e:' PREFIX (Kotlin errors) ==="
+        echo "============================================"
+        grep "^e: " build-output.log | head -50 || true
+        echo ""
+        echo "============================================"
+        echo "=== LAST 80 LINES BEFORE FAILURE ==="
+        echo "============================================"
+        tail -80 build-output.log || true
+
+    - name: Upload build log on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-log
+        path: build-output.log
+        retention-days: 7
 
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
+      if: success()
       with:
         name: os-emu-debug-apk
         path: app/build/outputs/apk/debug/*.apk
         retention-days: 30
 
     - name: Build Release APK (unsigned)
+      if: success()
       run: ./gradlew assembleRelease --no-daemon --no-build-cache --stacktrace
-      continue-on-error: true
 
     - name: Upload Release APK
       uses: actions/upload-artifact@v4
