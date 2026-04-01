@@ -46,32 +46,29 @@ jobs:
         echo ""
         echo "=== All resource files ==="
         find app/src/main/res -type f | sort
-        echo ""
-        echo "=== Searching for ANY mipmap reference in entire project ==="
-        grep -rn "mipmap" app/ || echo "CONFIRMED: Zero mipmap references found"
 
     - name: Clean and Build Debug APK
       run: |
-        ./gradlew clean assembleDebug --no-daemon --no-build-cache --stacktrace 2>&1 | tee build-output.log
-        exit ${PIPESTATUS[0]}
-
-    - name: Show errors on failure
-      if: failure()
-      run: |
-        echo "============================================"
-        echo "=== COMPILATION ERRORS (filtered) ==="
-        echo "============================================"
-        grep -i "error" build-output.log | head -50 || true
-        echo ""
-        echo "============================================"
-        echo "=== LINES WITH 'e:' PREFIX (Kotlin errors) ==="
-        echo "============================================"
-        grep "^e: " build-output.log | head -50 || true
-        echo ""
-        echo "============================================"
-        echo "=== LAST 80 LINES BEFORE FAILURE ==="
-        echo "============================================"
-        tail -80 build-output.log || true
+        set +e
+        ./gradlew clean assembleDebug --no-daemon --no-build-cache --stacktrace --console=plain > build-output.log 2>&1
+        BUILD_EXIT=$?
+        cat build-output.log
+        if [ $BUILD_EXIT -ne 0 ]; then
+          echo ""
+          echo "============================================"
+          echo "=== EXTRACTED ERRORS ==="
+          echo "============================================"
+          echo ""
+          echo "--- Lines with 'error' ---"
+          grep -i "error" build-output.log | grep -v "^	at " | head -30 || true
+          echo ""
+          echo "--- Kotlin compiler errors (e:) ---"
+          grep "^e: " build-output.log | head -30 || true
+          echo ""
+          echo "--- What went wrong ---"
+          sed -n '/What went wrong/,/Try:/p' build-output.log || true
+          exit 1
+        fi
 
     - name: Upload build log on failure
       if: failure()
@@ -82,8 +79,8 @@ jobs:
         retention-days: 7
 
     - name: Upload Debug APK
-      uses: actions/upload-artifact@v4
       if: success()
+      uses: actions/upload-artifact@v4
       with:
         name: os-emu-debug-apk
         path: app/build/outputs/apk/debug/*.apk
@@ -91,11 +88,11 @@ jobs:
 
     - name: Build Release APK (unsigned)
       if: success()
-      run: ./gradlew assembleRelease --no-daemon --no-build-cache --stacktrace
+      run: ./gradlew assembleRelease --no-daemon --no-build-cache --stacktrace --console=plain
 
     - name: Upload Release APK
-      uses: actions/upload-artifact@v4
       if: success()
+      uses: actions/upload-artifact@v4
       with:
         name: os-emu-release-apk
         path: app/build/outputs/apk/release/*.apk
