@@ -17,17 +17,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.osemu.app.data.model.Collection
+import com.osemu.app.data.model.GameCollection
 import com.osemu.app.ui.theme.LocalOsEmuExtras
 import com.osemu.app.ui.theme.OsEmuColors
 
 @Composable
 fun CollectionsScreen(
-    collections: List<Collection>,
+    collections: List<GameCollection>,
     collectionGameCounts: Map<Long, Int>,
-    onCollectionClick: (Collection) -> Unit,
+    onCollectionClick: (GameCollection) -> Unit,
     onCreateCollection: (String, String) -> Unit,
-    onDeleteCollection: (Collection) -> Unit,
+    onDeleteCollection: (GameCollection) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -137,7 +137,7 @@ fun CollectionsScreen(
 
 @Composable
 private fun CollectionCard(
-    collection: Collection,
+    collection: GameCollection,
     gameCount: Int,
     onClick: () -> Unit,
     onDelete: () -> Unit

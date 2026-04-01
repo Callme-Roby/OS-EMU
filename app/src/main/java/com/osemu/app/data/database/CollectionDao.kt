@@ -1,27 +1,27 @@
 package com.osemu.app.data.database
 
 import androidx.room.*
-import com.osemu.app.data.model.Collection
 import com.osemu.app.data.model.CollectionGame
+import com.osemu.app.data.model.GameCollection
 import com.osemu.app.data.model.Game
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CollectionDao {
     @Query("SELECT * FROM collections ORDER BY sortOrder ASC, name ASC")
-    fun getAllCollections(): Flow<List<Collection>>
+    fun getAllCollections(): Flow<List<GameCollection>>
 
     @Query("SELECT * FROM collections WHERE id = :id")
-    suspend fun getCollectionById(id: Long): Collection?
+    suspend fun getCollectionById(id: Long): GameCollection?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertCollection(collection: Collection): Long
+    suspend fun insertCollection(collection: GameCollection): Long
 
     @Update
-    suspend fun updateCollection(collection: Collection)
+    suspend fun updateCollection(collection: GameCollection)
 
     @Delete
-    suspend fun deleteCollection(collection: Collection)
+    suspend fun deleteCollection(collection: GameCollection)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addGameToCollection(collectionGame: CollectionGame)

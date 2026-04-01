@@ -6,7 +6,7 @@ import androidx.room.*
  * Custom game collection (e.g., "RPGs", "Favorites", "Beat 'em ups").
  */
 @Entity(tableName = "collections")
-data class Collection(
+data class GameCollection(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val name: String,
@@ -26,7 +26,7 @@ data class Collection(
     primaryKeys = ["collectionId", "gameId"],
     foreignKeys = [
         ForeignKey(
-            entity = Collection::class,
+            entity = GameCollection::class,
             parentColumns = ["id"],
             childColumns = ["collectionId"],
             onDelete = ForeignKey.CASCADE
@@ -48,6 +48,6 @@ data class CollectionGame(
 )
 
 data class CollectionWithGames(
-    val collection: Collection,
+    val collection: GameCollection,
     val games: List<Game>
 )

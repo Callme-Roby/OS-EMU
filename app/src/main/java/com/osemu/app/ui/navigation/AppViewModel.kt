@@ -38,7 +38,7 @@ data class AppUiState(
     val isScanning: Boolean = false,
     val scanStatus: String = "",
     // Collections
-    val collections: List<Collection> = emptyList(),
+    val collections: List<GameCollection> = emptyList(),
     val collectionGameCounts: Map<Long, Int> = emptyMap(),
     // Badges
     val badges: List<Badge> = BadgeRegistry.allBadges,
@@ -268,12 +268,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun createCollection(name: String, description: String) {
         viewModelScope.launch {
             collectionDao.insertCollection(
-                Collection(name = name, description = description)
+                GameCollection(name = name, description = description)
             )
         }
     }
 
-    fun deleteCollection(collection: Collection) {
+    fun deleteCollection(collection: GameCollection) {
         viewModelScope.launch { collectionDao.deleteCollection(collection) }
     }
 

@@ -5,8 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.osemu.app.data.model.Collection
 import com.osemu.app.data.model.CollectionGame
+import com.osemu.app.data.model.GameCollection
 import com.osemu.app.data.model.Game
 import com.osemu.app.data.model.GameConverters
 import com.osemu.app.data.model.SaveState
@@ -15,7 +15,7 @@ import com.osemu.app.data.model.SaveState
     entities = [
         Game::class,
         SaveState::class,
-        Collection::class,
+        GameCollection::class,
         CollectionGame::class
     ],
     version = 2,
