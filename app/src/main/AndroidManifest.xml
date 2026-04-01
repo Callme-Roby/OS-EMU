@@ -30,7 +30,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.OsEmu"
         android:largeHeap="true"
-        android:hardwareAccelerated="true">
+        android:hardwareAccelerated="true"
+        tools:replace="android:icon,android:roundIcon">
 
         <activity
             android:name=".MainActivity"

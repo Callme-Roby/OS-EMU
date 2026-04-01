@@ -30,26 +30,31 @@ jobs:
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
+      with:
+        cache-disabled: true
 
     - name: Create local.properties
       run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
-    - name: Verify project structure
+    - name: Debug - Show commit and manifest
       run: |
-        echo "=== Manifest icon references ==="
-        grep -n "icon\|Icon" app/src/main/AndroidManifest.xml || true
+        echo "=== Current commit ==="
+        git log --oneline -1
         echo ""
-        echo "=== Resource directories ==="
+        echo "=== Full AndroidManifest.xml ==="
+        cat app/src/main/AndroidManifest.xml
+        echo ""
+        echo "=== All resource files ==="
         find app/src/main/res -type f | sort
         echo ""
-        echo "=== Check for mipmap references ==="
-        grep -rn "mipmap" app/src/main/ || echo "No mipmap references found (good)"
+        echo "=== Searching for ANY mipmap reference in entire project ==="
+        grep -rn "mipmap" app/ || echo "CONFIRMED: Zero mipmap references found"
         echo ""
-        echo "=== Gradle version ==="
-        ./gradlew --version
+        echo "=== Searching for ic_launcher references ==="
+        grep -rn "ic_launcher" app/ || echo "No ic_launcher references"
 
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug --no-daemon --stacktrace
+    - name: Clean and Build Debug APK
+      run: ./gradlew clean assembleDebug --no-daemon --no-build-cache --stacktrace
 
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
@@ -59,7 +64,7 @@ jobs:
         retention-days: 30
 
     - name: Build Release APK (unsigned)
-      run: ./gradlew assembleRelease --no-daemon --stacktrace
+      run: ./gradlew assembleRelease --no-daemon --no-build-cache --stacktrace
       continue-on-error: true
 
     - name: Upload Release APK
