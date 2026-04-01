@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.osemu.app.ui.screens
 
 import androidx.compose.foundation.layout.*
@@ -6,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,7 +20,6 @@ import com.osemu.app.ui.theme.LocalOsEmuExtras
 /**
  * Settings screen mimicking 3DS system settings with categorized sections.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     autoSaveEnabled: Boolean,
