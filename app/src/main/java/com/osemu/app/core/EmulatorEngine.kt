@@ -73,17 +73,21 @@ class EmulatorEngine(private val context: Context) {
 
         _state.value = EmulatorState.LOADING
 
-        // Find appropriate core
+        // Find appropriate core (if available)
         val cores = getCoresForConsole(console)
-        if (cores.isEmpty()) {
-            _state.value = EmulatorState.ERROR
-            return false
+        val preferredCoreName = config.coreName.ifEmpty { console.coreNames.firstOrNull() ?: "stub" }
+
+        if (cores.isNotEmpty()) {
+            val core = cores.find { it.name == preferredCoreName } ?: cores.first()
+            _currentCore.value = core
+        } else {
+            // Stub mode: no native core available, set a placeholder
+            _currentCore.value = CoreInfo(
+                name = preferredCoreName,
+                path = "",
+                supportedConsoles = listOf(console)
+            )
         }
-
-        val preferredCore = config.coreName.ifEmpty { console.coreNames.first() }
-        val core = cores.find { it.name == preferredCore } ?: cores.first()
-
-        _currentCore.value = core
 
         // In a real implementation, this would call JNI to:
         // 1. Load the libretro core .so file

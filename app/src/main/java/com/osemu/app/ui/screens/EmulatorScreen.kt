@@ -2,7 +2,10 @@ package com.osemu.app.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,16 +17,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.osemu.app.core.EmulatorState
 import com.osemu.app.data.model.Game
+import com.osemu.app.ui.theme.OsEmuColors
 
 /**
  * Full-screen emulator view with touch overlay controls
- * and an in-game menu for save states, shaders, and settings.
+ * and an in-game menu for save states and settings.
  */
 @Composable
 fun EmulatorScreen(
@@ -42,15 +50,27 @@ fun EmulatorScreen(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showSaveSlots by remember { mutableStateOf(false) }
-    var saveMode by remember { mutableStateOf(true) } // true = save, false = load
+    var saveMode by remember { mutableStateOf(true) }
 
-    Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
-        // Emulator rendering surface placeholder
-        // In real implementation, this would be a SurfaceView or TextureView
-        // connected to the libretro video callback
-        Box(
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF1A1A2E),
+                        Color(0xFF16213E),
+                        Color(0xFF0F3460)
+                    )
+                )
+            )
+    ) {
+        // Game display area (top portion)
+        Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .fillMaxHeight(0.45f)
+                .align(Alignment.TopCenter)
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onDoubleTap = {
@@ -59,19 +79,105 @@ fun EmulatorScreen(
                         }
                     )
                 },
-            contentAlignment = Alignment.Center
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            if (emulatorState == EmulatorState.LOADING) {
-                CircularProgressIndicator(color = Color.White)
+            // Game render area placeholder
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .aspectRatio(4f / 3f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                when (emulatorState) {
+                    EmulatorState.LOADING -> {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(
+                                color = OsEmuColors.Blue400,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Loading...",
+                                color = Color.White.copy(alpha = 0.7f),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    EmulatorState.ERROR -> {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = OsEmuColors.Yellow,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Core not available",
+                                color = Color.White.copy(alpha = 0.7f),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                    EmulatorState.PAUSED -> {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.Pause,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.5f),
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "PAUSED",
+                                color = Color.White.copy(alpha = 0.5f),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    else -> {
+                        // Running or Idle - show game info as placeholder
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Star,
+                                contentDescription = null,
+                                tint = OsEmuColors.Blue400.copy(alpha = 0.4f),
+                                modifier = Modifier.size(40.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = game.title,
+                                color = Color.White.copy(alpha = 0.8f),
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = game.console.displayName,
+                                color = Color.White.copy(alpha = 0.4f),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
             }
 
-            if (emulatorState == EmulatorState.IDLE) {
-                Text(
-                    text = "Ready to play: ${game.title}",
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
+            // Game title bar below screen
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = game.title,
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 11.sp,
+                maxLines = 1
+            )
         }
 
         // FPS counter
@@ -88,15 +194,7 @@ fun EmulatorScreen(
             )
         }
 
-        // Touch overlay controls
-        if (emulatorState == EmulatorState.RUNNING && !showMenu) {
-            TouchOverlay(
-                opacity = touchOverlayOpacity,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-
-        // Menu button (always visible)
+        // Menu button (top-left, always visible)
         IconButton(
             onClick = {
                 showMenu = !showMenu
@@ -104,15 +202,23 @@ fun EmulatorScreen(
             },
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(8.dp)
-                .alpha(0.6f)
+                .padding(4.dp)
         ) {
             Icon(
                 Icons.Default.Menu,
                 contentDescription = "Menu",
-                tint = Color.White
+                tint = Color.White.copy(alpha = 0.7f)
             )
         }
+
+        // Touch controls (always visible in bottom portion)
+        TouchOverlay(
+            opacity = touchOverlayOpacity.coerceAtLeast(0.4f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.55f)
+                .align(Alignment.BottomCenter)
+        )
 
         // In-game menu overlay
         AnimatedVisibility(
@@ -272,7 +378,7 @@ private fun SaveSlotDialog(
 
 /**
  * On-screen touch controls overlay.
- * D-pad, A/B/X/Y, Start/Select, L/R shoulders.
+ * D-pad on left, action buttons on right, Start/Select center, L/R top.
  */
 @Composable
 private fun TouchOverlay(
@@ -280,69 +386,115 @@ private fun TouchOverlay(
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.alpha(opacity)) {
-        // D-Pad (bottom-left)
-        Column(
+        // L/R shoulders (top of control area)
+        Row(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 24.dp, bottom = 48.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            DPadButton("Up")
-            Row {
-                DPadButton("Left")
-                Spacer(modifier = Modifier.size(40.dp))
-                DPadButton("Right")
-            }
-            DPadButton("Down")
+            ShoulderButton("L")
+            ShoulderButton("R")
         }
 
-        // Action buttons (bottom-right)
-        Column(
+        // D-Pad (bottom-left)
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 20.dp, bottom = 40.dp)
+        ) {
+            // D-pad background circle
+            Box(
+                modifier = Modifier
+                    .size(140.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    DPadButton("Up")
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        DPadButton("Left")
+                        // Center dot
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color.White.copy(alpha = 0.1f))
+                        )
+                        DPadButton("Right")
+                    }
+                    DPadButton("Down")
+                }
+            }
+        }
+
+        // Action buttons (bottom-right) - diamond layout
+        Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 24.dp, bottom = 48.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(end = 20.dp, bottom = 40.dp)
         ) {
-            ActionButton("X", Color(0xFF4FC3F7))
-            Row {
-                ActionButton("Y", Color(0xFF66BB6A))
-                Spacer(modifier = Modifier.size(40.dp))
-                ActionButton("A", Color(0xFFEF5350))
+            Box(
+                modifier = Modifier
+                    .size(140.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    ActionButton("X", Color(0xFF42A5F5))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        ActionButton("Y", Color(0xFF66BB6A))
+                        Spacer(modifier = Modifier.width(36.dp))
+                        ActionButton("A", Color(0xFFEF5350))
+                    }
+                    ActionButton("B", Color(0xFFFFCA28))
+                }
             }
-            ActionButton("B", Color(0xFFFFCA28))
         }
 
         // Start/Select (bottom-center)
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            SmallButton("SEL")
+            SmallButton("SELECT")
             SmallButton("START")
-        }
-
-        // L/R shoulders (top)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp, start = 8.dp, end = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            ShoulderButton("L")
-            ShoulderButton("R")
         }
     }
 }
 
 @Composable
 private fun DPadButton(direction: String) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
     Box(
         modifier = Modifier
-            .size(40.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(Color.White.copy(alpha = 0.3f)),
+            .size(38.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(
+                if (isPressed) Color.White.copy(alpha = 0.5f)
+                else Color.White.copy(alpha = 0.25f)
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) { },
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -354,50 +506,91 @@ private fun DPadButton(direction: String) {
                 else -> ""
             },
             color = Color.White,
-            style = MaterialTheme.typography.labelSmall
+            fontSize = 14.sp
         )
     }
 }
 
 @Composable
 private fun ActionButton(label: String, color: Color) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(42.dp)
             .clip(CircleShape)
-            .background(color.copy(alpha = 0.6f)),
+            .background(
+                if (isPressed) color.copy(alpha = 0.9f)
+                else color.copy(alpha = 0.55f)
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) { },
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,
             color = Color.White,
-            style = MaterialTheme.typography.labelLarge
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold
         )
     }
 }
 
 @Composable
 private fun SmallButton(label: String) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.White.copy(alpha = 0.2f))
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (isPressed) Color.White.copy(alpha = 0.35f)
+                else Color.White.copy(alpha = 0.18f)
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) { }
+            .padding(horizontal = 14.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = Color.White, style = MaterialTheme.typography.labelSmall)
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 
 @Composable
 private fun ShoulderButton(label: String) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
-            .background(Color.White.copy(alpha = 0.2f))
-            .padding(horizontal = 24.dp, vertical = 8.dp),
+            .clip(RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
+            .background(
+                if (isPressed) Color.White.copy(alpha = 0.4f)
+                else Color.White.copy(alpha = 0.2f)
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) { }
+            .padding(horizontal = 32.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, color = Color.White, style = MaterialTheme.typography.labelMedium)
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
