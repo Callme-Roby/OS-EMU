@@ -114,8 +114,8 @@ fun GameLibraryScreen(
                             LibraryViewMode.LIST else LibraryViewMode.GRID
                     }) {
                         Icon(
-                            if (viewMode == LibraryViewMode.GRID) Icons.Default.ViewList
-                            else Icons.Default.GridView,
+                            if (viewMode == LibraryViewMode.GRID) Icons.Default.List
+                            else Icons.Default.List,
                             contentDescription = "View mode",
                             tint = Color.White
                         )
@@ -374,7 +374,7 @@ private fun EmptyLibraryState(isSearching: Boolean) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(
-                imageVector = if (isSearching) Icons.Default.SearchOff else Icons.Default.FolderOpen,
+                imageVector = if (isSearching) Icons.Default.Search else Icons.Default.Folder,
                 contentDescription = null,
                 modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)

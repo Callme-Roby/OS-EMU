@@ -93,12 +93,8 @@ fun StatusBar3DS(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            val batteryIcon = when {
-                batteryLevel > 90 -> Icons.Default.BatteryFull
-                batteryLevel > 50 -> Icons.Default.Battery5Bar
-                batteryLevel > 20 -> Icons.Default.Battery3Bar
-                else -> Icons.Default.Battery1Bar
-            }
+            val batteryIcon = if (batteryLevel > 20) Icons.Default.BatteryFull
+                else Icons.Default.BatteryAlert
             Icon(
                 imageVector = batteryIcon,
                 contentDescription = "Battery $batteryLevel%",

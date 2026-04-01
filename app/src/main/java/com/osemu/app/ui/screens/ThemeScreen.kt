@@ -88,7 +88,7 @@ fun ThemeScreen(
             item {
                 CustomBackgroundCard(
                     label = "Top Screen",
-                    icon = Icons.Default.Wallpaper,
+                    icon = Icons.Default.Image,
                     onClick = onCustomBackgroundTop
                 )
             }

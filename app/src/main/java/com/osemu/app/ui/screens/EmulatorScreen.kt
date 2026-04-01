@@ -196,13 +196,13 @@ private fun InGameMenu(
 
                 MenuButton(Icons.Default.PlayArrow, "Resume", onClick = onResume)
                 MenuButton(Icons.Default.Save, "Save State", onClick = onSaveState)
-                MenuButton(Icons.Default.FileOpen, "Load State", onClick = onLoadState)
-                MenuButton(Icons.Default.FastForward, "Fast Forward", onClick = onToggleFastForward)
+                MenuButton(Icons.Default.Folder, "Load State", onClick = onLoadState)
+                MenuButton(Icons.Default.SkipNext, "Fast Forward", onClick = onToggleFastForward)
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 MenuButton(
-                    icon = Icons.Default.ExitToApp,
+                    icon = Icons.Default.Close,
                     label = "Exit Game",
                     color = MaterialTheme.colorScheme.error,
                     onClick = onExit
@@ -251,7 +251,7 @@ private fun SaveSlotDialog(
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Icon(
-                            if (isSaveMode) Icons.Default.Save else Icons.Default.FileOpen,
+                            if (isSaveMode) Icons.Default.Save else Icons.Default.Folder,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )

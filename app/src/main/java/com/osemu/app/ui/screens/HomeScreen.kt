@@ -252,7 +252,7 @@ private fun WelcomeDisplay(totalGameCount: Int) {
         modifier = Modifier.fillMaxSize()
     ) {
         Icon(
-            imageVector = Icons.Default.SportsEsports,
+            imageVector = Icons.Default.Star,
             contentDescription = null,
             modifier = Modifier.size(64.dp),
             tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
@@ -296,11 +296,11 @@ private fun BottomScreenPanel(
     modifier: Modifier = Modifier
 ) {
     val extras = LocalOsEmuExtras.current
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by remember { mutableStateOf(0) }
 
     val tabs = listOf(
         TabItem(Icons.Default.Home, "Home", "home"),
-        TabItem(Icons.Default.GridView, "Library", "library"),
+        TabItem(Icons.Default.List, "Library", "library"),
         TabItem(Icons.Default.Favorite, "Favorites", "favorites"),
         TabItem(Icons.Default.Settings, "Settings", "settings")
     )

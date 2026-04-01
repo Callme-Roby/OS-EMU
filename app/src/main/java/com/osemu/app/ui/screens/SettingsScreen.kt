@@ -63,7 +63,7 @@ fun SettingsScreen(
             // --- Emulation Section ---
             item {
                 SettingsSectionHeader(
-                    icon = Icons.Default.SportsEsports,
+                    icon = Icons.Default.Star,
                     title = "Emulation"
                 )
             }
@@ -95,7 +95,7 @@ fun SettingsScreen(
                 SettingsToggleItem(
                     title = "Show FPS counter",
                     subtitle = "Display frame rate overlay",
-                    icon = Icons.Default.Speed,
+                    icon = Icons.Default.Refresh,
                     checked = showFps,
                     onCheckedChange = onShowFpsToggle
                 )
@@ -125,7 +125,7 @@ fun SettingsScreen(
                 SettingsToggleItem(
                     title = "Vibration",
                     subtitle = "Haptic feedback for controls",
-                    icon = Icons.Default.Vibration,
+                    icon = Icons.Default.Notifications,
                     checked = vibrationEnabled,
                     onCheckedChange = onVibrationToggle
                 )
@@ -135,7 +135,7 @@ fun SettingsScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 SettingsSectionHeader(
-                    icon = Icons.Default.Tv,
+                    icon = Icons.Default.Phone,
                     title = "Display"
                 )
             }
@@ -144,7 +144,7 @@ fun SettingsScreen(
                 SettingsSliderItem(
                     title = "Touch overlay opacity",
                     subtitle = "${(touchOverlayOpacity * 100).toInt()}%",
-                    icon = Icons.Default.TouchApp,
+                    icon = Icons.Default.Create,
                     value = touchOverlayOpacity,
                     valueRange = 0f..1f,
                     onValueChange = onTouchOverlayOpacityChange
@@ -164,7 +164,7 @@ fun SettingsScreen(
                 SettingsClickItem(
                     title = "Scan paths",
                     subtitle = "Manage ROM directories",
-                    icon = Icons.Default.FolderOpen,
+                    icon = Icons.Default.Folder,
                     onClick = onManageScanPaths
                 )
             }
@@ -173,7 +173,7 @@ fun SettingsScreen(
                 SettingsClickItem(
                     title = "Emulator cores",
                     subtitle = "Manage libretro cores",
-                    icon = Icons.Default.Extension,
+                    icon = Icons.Default.Build,
                     onClick = onManageCores
                 )
             }
@@ -191,7 +191,7 @@ fun SettingsScreen(
                 SettingsClickItem(
                     title = "Themes",
                     subtitle = "Customize colors and backgrounds",
-                    icon = Icons.Default.ColorLens,
+                    icon = Icons.Default.Palette,
                     onClick = onNavigateToThemes
                 )
             }
@@ -217,7 +217,7 @@ fun SettingsScreen(
                 SettingsInfoItem(
                     title = "OS-EMU",
                     value = "Retro Emulator Frontend",
-                    icon = Icons.Default.SportsEsports
+                    icon = Icons.Default.Star
                 )
             }
         }

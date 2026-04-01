@@ -186,9 +186,9 @@ fun SystemIcon(
 
 fun getConsoleIcon(manufacturer: String): ImageVector {
     return when (manufacturer) {
-        "Nintendo" -> Icons.Default.SportsEsports
-        "Sega" -> Icons.Default.Gamepad
-        "Sony" -> Icons.Default.Games
-        else -> Icons.Default.VideogameAsset
+        "Nintendo" -> Icons.Default.Star
+        "Sega" -> Icons.Default.Star
+        "Sony" -> Icons.Default.Star
+        else -> Icons.Default.Star
     }
 }
