@@ -34,8 +34,22 @@ jobs:
     - name: Create local.properties
       run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
+    - name: Verify project structure
+      run: |
+        echo "=== Manifest icon references ==="
+        grep -n "icon\|Icon" app/src/main/AndroidManifest.xml || true
+        echo ""
+        echo "=== Resource directories ==="
+        find app/src/main/res -type f | sort
+        echo ""
+        echo "=== Check for mipmap references ==="
+        grep -rn "mipmap" app/src/main/ || echo "No mipmap references found (good)"
+        echo ""
+        echo "=== Gradle version ==="
+        ./gradlew --version
+
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --no-daemon
+      run: ./gradlew assembleDebug --no-daemon --stacktrace
 
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
@@ -45,7 +59,7 @@ jobs:
         retention-days: 30
 
     - name: Build Release APK (unsigned)
-      run: ./gradlew assembleRelease --no-daemon
+      run: ./gradlew assembleRelease --no-daemon --stacktrace
       continue-on-error: true
 
     - name: Upload Release APK
