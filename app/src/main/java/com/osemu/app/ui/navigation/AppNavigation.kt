@@ -14,6 +14,12 @@ sealed class Screen(val route: String) {
     data object Library : Screen("library")
     data object Settings : Screen("settings")
     data object Themes : Screen("themes")
+    data object Collections : Screen("collections")
+    data object Badges : Screen("badges")
+    data object Media : Screen("media")
+    data object GameDetail : Screen("game_detail/{gameId}") {
+        fun createRoute(gameId: Long) = "game_detail/$gameId"
+    }
     data object Emulator : Screen("emulator/{gameId}") {
         fun createRoute(gameId: Long) = "emulator/$gameId"
     }
@@ -37,11 +43,15 @@ fun AppNavigation(
             HomeScreen(
                 recentGames = uiState.recentGames,
                 favoriteGames = uiState.favoriteGames,
+                allGames = uiState.allGames,
                 totalGameCount = uiState.totalGameCount,
                 selectedGameIndex = uiState.selectedGameIndex,
                 onGameSelected = { appViewModel.selectGame(it) },
                 onGameLaunched = { game ->
                     navController.navigate(Screen.Emulator.createRoute(game.id))
+                },
+                onGameDetail = { game ->
+                    navController.navigate(Screen.GameDetail.createRoute(game.id))
                 },
                 onNavigateToLibrary = {
                     navController.navigate(Screen.Library.route)
@@ -52,10 +62,20 @@ fun AppNavigation(
                 onNavigateToThemes = {
                     navController.navigate(Screen.Themes.route)
                 },
+                onNavigateToCollections = {
+                    navController.navigate(Screen.Collections.route)
+                },
+                onNavigateToBadges = {
+                    navController.navigate(Screen.Badges.route)
+                },
+                onNavigateToMedia = {
+                    navController.navigate(Screen.Media.route)
+                },
                 onScanGames = { appViewModel.scanDefaultPaths() },
                 onPickFolder = onPickFolder,
                 isScanning = uiState.isScanning,
-                scanStatus = uiState.scanStatus
+                scanStatus = uiState.scanStatus,
+                badges = uiState.badges
             )
         }
 
@@ -67,11 +87,65 @@ fun AppNavigation(
                 searchQuery = uiState.searchQuery,
                 onSearchQueryChanged = { appViewModel.updateSearchQuery(it) },
                 onGameSelected = { game ->
-                    navController.navigate(Screen.Emulator.createRoute(game.id))
+                    navController.navigate(Screen.GameDetail.createRoute(game.id))
                 },
                 onGameLongPress = { game ->
                     appViewModel.toggleFavorite(game)
                 },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Screen.GameDetail.route,
+            arguments = listOf(navArgument("gameId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val gameId = backStackEntry.arguments?.getLong("gameId") ?: return@composable
+            val game = uiState.allGames.find { it.id == gameId }
+
+            if (game != null) {
+                GameDetailScreen(
+                    game = game,
+                    onPlay = {
+                        navController.navigate(Screen.Emulator.createRoute(game.id))
+                    },
+                    onToggleFavorite = { appViewModel.toggleFavorite(game) },
+                    onSetBoxArt = { /* TODO: Image picker for box art */ },
+                    onAddToCollection = {
+                        navController.navigate(Screen.Collections.route)
+                    },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
+
+        composable(Screen.Collections.route) {
+            CollectionsScreen(
+                collections = uiState.collections,
+                collectionGameCounts = uiState.collectionGameCounts,
+                onCollectionClick = { /* TODO: Collection detail */ },
+                onCreateCollection = { name, desc ->
+                    appViewModel.createCollection(name, desc)
+                },
+                onDeleteCollection = { appViewModel.deleteCollection(it) },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Badges.route) {
+            BadgeScreen(
+                badges = uiState.badges,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Media.route) {
+            MediaScreen(
+                mediaItems = uiState.mediaItems,
+                onAddMedia = { /* TODO: Media picker */ },
+                onMediaClick = { /* TODO: Media viewer */ },
+                onSetAsWallpaper = { /* TODO: Set wallpaper */ },
+                onSetAsMenuMusic = { /* TODO: Set menu music */ },
                 onBack = { navController.popBackStack() }
             )
         }
@@ -90,8 +164,8 @@ fun AppNavigation(
                 onAudioVolumeChange = { appViewModel.setAudioVolume(it) },
                 touchOverlayOpacity = uiState.touchOverlayOpacity,
                 onTouchOverlayOpacityChange = { appViewModel.setTouchOverlayOpacity(it) },
-                onManageCores = { /* TODO: Core management screen */ },
-                onManageScanPaths = { /* TODO: Scan path management */ },
+                onManageCores = { /* TODO */ },
+                onManageScanPaths = { /* TODO */ },
                 onNavigateToThemes = {
                     navController.navigate(Screen.Themes.route)
                 },
@@ -103,8 +177,8 @@ fun AppNavigation(
             ThemeScreen(
                 currentThemeId = uiState.currentThemeId,
                 onThemeSelected = { appViewModel.setTheme(it) },
-                onCustomBackgroundTop = { /* TODO: Image picker */ },
-                onCustomBackgroundBottom = { /* TODO: Image picker */ },
+                onCustomBackgroundTop = { /* TODO */ },
+                onCustomBackgroundBottom = { /* TODO */ },
                 onBack = { navController.popBackStack() }
             )
         }

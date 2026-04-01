@@ -73,9 +73,14 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.animation:animation")
+    implementation("androidx.compose.foundation:foundation")
 
     // Adaptive layout
     implementation("androidx.compose.material3:material3-window-size-class")
+
+    // Media playback
+    implementation("androidx.media3:media3-exoplayer:1.2.1")
+    implementation("androidx.media3:media3-ui:1.2.1")
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.6")

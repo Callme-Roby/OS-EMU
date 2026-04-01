@@ -36,13 +36,21 @@ data class AppUiState(
     val audioVolume: Float = 1.0f,
     val touchOverlayOpacity: Float = 0.5f,
     val isScanning: Boolean = false,
-    val scanStatus: String = ""
+    val scanStatus: String = "",
+    // Collections
+    val collections: List<Collection> = emptyList(),
+    val collectionGameCounts: Map<Long, Int> = emptyMap(),
+    // Badges
+    val badges: List<Badge> = BadgeRegistry.allBadges,
+    // Media
+    val mediaItems: List<MediaItem> = emptyList()
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = AppDatabase.getInstance(application)
     private val gameRepository = GameRepository(database.gameDao(), database.saveStateDao())
+    private val collectionDao = database.collectionDao()
     private val settingsRepository = SettingsRepository(application)
     private val emulatorEngine = EmulatorEngine(application)
     private val gameScanner = GameScanner(application, gameRepository)
@@ -54,10 +62,10 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private var sessionStartTime: Long = 0
 
     init {
-        // Collect all data streams
         viewModelScope.launch {
             gameRepository.getAllGames().collect { games ->
                 _uiState.update { it.copy(allGames = games, totalGameCount = games.size) }
+                updateBadges()
             }
         }
         viewModelScope.launch {
@@ -68,6 +76,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             gameRepository.getFavorites().collect { games ->
                 _uiState.update { it.copy(favoriteGames = games) }
+                updateBadges()
             }
         }
         viewModelScope.launch {
@@ -126,6 +135,45 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update { it.copy(scanStatus = progress.status) }
             }
         }
+        // Collections
+        viewModelScope.launch {
+            collectionDao.getAllCollections().collect { collections ->
+                _uiState.update { it.copy(collections = collections) }
+                updateBadges()
+            }
+        }
+    }
+
+    // --- Badge System ---
+    private fun updateBadges() {
+        val state = _uiState.value
+        val updatedBadges = BadgeRegistry.allBadges.map { badge ->
+            val unlocked = checkBadgeRequirement(badge.requirement, state)
+            badge.copy(
+                isUnlocked = unlocked,
+                unlockedAt = if (unlocked) badge.unlockedAt ?: System.currentTimeMillis() else null
+            )
+        }
+        _uiState.update { it.copy(badges = updatedBadges) }
+    }
+
+    private fun checkBadgeRequirement(req: BadgeRequirement, state: AppUiState): Boolean = when (req) {
+        is BadgeRequirement.GamesInLibrary -> state.totalGameCount >= req.count
+        is BadgeRequirement.FirstGame -> state.totalGameCount >= 1
+        is BadgeRequirement.GamesPlayed ->
+            state.allGames.count { it.lastPlayed != null } >= req.count
+        is BadgeRequirement.TotalPlayTime ->
+            state.allGames.sumOf { it.totalPlayTimeMs } >= req.hours * 3_600_000L
+        is BadgeRequirement.ConsolesUsed ->
+            state.allGames.filter { it.lastPlayed != null }.map { it.console }.distinct().size >= req.count
+        is BadgeRequirement.FavoritesAdded -> state.favoriteGames.size >= req.count
+        is BadgeRequirement.FirstFavorite -> state.favoriteGames.isNotEmpty()
+        is BadgeRequirement.CollectionsCreated -> state.collections.size >= req.count
+        is BadgeRequirement.ThemeChanged -> state.currentThemeId != Theme.DEFAULT.id
+        is BadgeRequirement.AllConsoles -> {
+            val played = state.allGames.filter { it.lastPlayed != null }.map { it.console }.distinct()
+            played.size >= Console.entries.size
+        }
     }
 
     // --- Game Selection ---
@@ -152,43 +200,30 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val game = gameRepository.getGameById(gameId) ?: return@launch
             _uiState.update { it.copy(currentGame = game) }
-
             val config = EmulatorConfig(
                 gameId = game.id,
                 console = game.console,
                 autoSaveEnabled = _uiState.value.autoSaveEnabled,
                 autoSaveIntervalSeconds = _uiState.value.autoSaveInterval
             )
-
             emulatorEngine.loadGame(game.filePath, game.console, config)
             sessionStartTime = System.currentTimeMillis()
         }
     }
 
-    fun pauseEmulator() {
-        emulatorEngine.pause()
-    }
-
-    fun resumeEmulator() {
-        emulatorEngine.resume()
-    }
+    fun pauseEmulator() { emulatorEngine.pause() }
+    fun resumeEmulator() { emulatorEngine.resume() }
 
     fun stopEmulator() {
         val sessionMs = System.currentTimeMillis() - sessionStartTime
         val currentGame = _uiState.value.currentGame
-
-        if (_uiState.value.autoSaveEnabled) {
-            emulatorEngine.autoSave()
-        }
-
+        if (_uiState.value.autoSaveEnabled) { emulatorEngine.autoSave() }
         emulatorEngine.stop()
-
         if (currentGame != null && sessionMs > 0) {
             viewModelScope.launch {
                 gameRepository.recordPlaySession(currentGame.id, sessionMs)
             }
         }
-
         _uiState.update { it.copy(currentGame = null) }
     }
 
@@ -196,15 +231,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val game = _uiState.value.currentGame ?: return
         val statePath = emulatorEngine.saveState(slot)
         val screenshotPath = emulatorEngine.takeScreenshot()
-
         if (statePath != null) {
             viewModelScope.launch {
                 gameRepository.saveSaveState(
                     SaveState(
-                        gameId = game.id,
-                        slotIndex = slot,
-                        filePath = statePath,
-                        screenshotPath = screenshotPath,
+                        gameId = game.id, slotIndex = slot,
+                        filePath = statePath, screenshotPath = screenshotPath,
                         isAutoSave = slot == SaveState.AUTO_SAVE_SLOT
                     )
                 )
@@ -212,10 +244,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun loadState(slot: Int) {
-        emulatorEngine.loadState(slot)
-    }
-
+    fun loadState(slot: Int) { emulatorEngine.loadState(slot) }
     fun toggleFastForward() {
         fastForwardEnabled = !fastForwardEnabled
         emulatorEngine.setFastForward(fastForwardEnabled)
@@ -223,88 +252,70 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     // --- Settings ---
     fun setTheme(theme: Theme) {
-        viewModelScope.launch { settingsRepository.setTheme(theme.id) }
+        viewModelScope.launch {
+            settingsRepository.setTheme(theme.id)
+            updateBadges()
+        }
+    }
+    fun setAutoSave(enabled: Boolean) { viewModelScope.launch { settingsRepository.setAutoSave(enabled) } }
+    fun setAutoSaveInterval(seconds: Int) { viewModelScope.launch { settingsRepository.setAutoSaveInterval(seconds) } }
+    fun setShowFps(show: Boolean) { viewModelScope.launch { settingsRepository.setShowFps(show) } }
+    fun setVibration(enabled: Boolean) { viewModelScope.launch { settingsRepository.setVibration(enabled) } }
+    fun setAudioVolume(volume: Float) { viewModelScope.launch { settingsRepository.setAudioVolume(volume) } }
+    fun setTouchOverlayOpacity(opacity: Float) { viewModelScope.launch { settingsRepository.setTouchOverlayOpacity(opacity) } }
+
+    // --- Collections ---
+    fun createCollection(name: String, description: String) {
+        viewModelScope.launch {
+            collectionDao.insertCollection(
+                Collection(name = name, description = description)
+            )
+        }
     }
 
-    fun setAutoSave(enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.setAutoSave(enabled) }
+    fun deleteCollection(collection: Collection) {
+        viewModelScope.launch { collectionDao.deleteCollection(collection) }
     }
 
-    fun setAutoSaveInterval(seconds: Int) {
-        viewModelScope.launch { settingsRepository.setAutoSaveInterval(seconds) }
+    fun addGameToCollection(collectionId: Long, gameId: Long) {
+        viewModelScope.launch {
+            collectionDao.addGameToCollection(CollectionGame(collectionId, gameId))
+        }
     }
 
-    fun setShowFps(show: Boolean) {
-        viewModelScope.launch { settingsRepository.setShowFps(show) }
-    }
-
-    fun setVibration(enabled: Boolean) {
-        viewModelScope.launch { settingsRepository.setVibration(enabled) }
-    }
-
-    fun setAudioVolume(volume: Float) {
-        viewModelScope.launch { settingsRepository.setAudioVolume(volume) }
-    }
-
-    fun setTouchOverlayOpacity(opacity: Float) {
-        viewModelScope.launch { settingsRepository.setTouchOverlayOpacity(opacity) }
+    fun removeGameFromCollection(collectionId: Long, gameId: Long) {
+        viewModelScope.launch {
+            collectionDao.removeGameFromCollection(collectionId, gameId)
+        }
     }
 
     // --- Scanning ---
-
-    /**
-     * Scans common ROM directories on the device.
-     * Covers most popular locations where users store ROMs.
-     */
     fun scanDefaultPaths() {
         viewModelScope.launch {
             val storage = Environment.getExternalStorageDirectory().absolutePath
             val defaultPaths = listOf(
-                "$storage/Roms",
-                "$storage/ROMs",
-                "$storage/roms",
-                "$storage/Download",
-                "$storage/Download/Roms",
-                "$storage/Download/ROMs",
-                "$storage/Downloads",
-                "$storage/Downloads/Roms",
-                "$storage/Downloads/ROMs",
-                "$storage/RetroArch/roms",
-                "$storage/RetroArch/ROMs",
-                "$storage/Games",
-                "$storage/games",
-                "$storage/Emulation",
-                "$storage/Emulation/roms",
-                "$storage/Documents/Roms",
-                "$storage/Documents/ROMs"
+                "$storage/Roms", "$storage/ROMs", "$storage/roms",
+                "$storage/Download", "$storage/Download/Roms", "$storage/Download/ROMs",
+                "$storage/Downloads", "$storage/Downloads/Roms", "$storage/Downloads/ROMs",
+                "$storage/RetroArch/roms", "$storage/RetroArch/ROMs",
+                "$storage/Games", "$storage/games",
+                "$storage/Emulation", "$storage/Emulation/roms",
+                "$storage/Documents/Roms", "$storage/Documents/ROMs"
             )
             for (path in defaultPaths) {
-                if (File(path).exists()) {
-                    gameScanner.scanDirectory(path)
-                }
+                if (File(path).exists()) { gameScanner.scanDirectory(path) }
             }
-
-            // If nothing was found, update status
             if (_uiState.value.totalGameCount == 0 && !_uiState.value.isScanning) {
-                _uiState.update {
-                    it.copy(scanStatus = "No ROMs found. Use \"Add ROMs\" to pick a folder.")
-                }
+                _uiState.update { it.copy(scanStatus = "No ROMs found. Use \"Add ROMs\" to pick a folder.") }
             }
         }
     }
 
     fun scanPath(path: String) {
-        viewModelScope.launch {
-            gameScanner.scanDirectory(path)
-        }
+        viewModelScope.launch { gameScanner.scanDirectory(path) }
     }
 
-    /**
-     * Scan a URI from the SAF folder picker.
-     */
-    fun scanUri(uri: android.net.Uri) {
-        viewModelScope.launch {
-            gameScanner.scanUri(uri)
-        }
+    fun scanUri(uri: Uri) {
+        viewModelScope.launch { gameScanner.scanUri(uri) }
     }
 }

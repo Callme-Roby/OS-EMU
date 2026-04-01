@@ -5,13 +5,20 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.osemu.app.data.model.Collection
+import com.osemu.app.data.model.CollectionGame
 import com.osemu.app.data.model.Game
 import com.osemu.app.data.model.GameConverters
 import com.osemu.app.data.model.SaveState
 
 @Database(
-    entities = [Game::class, SaveState::class],
-    version = 1,
+    entities = [
+        Game::class,
+        SaveState::class,
+        Collection::class,
+        CollectionGame::class
+    ],
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(GameConverters::class)
@@ -19,6 +26,7 @@ abstract class AppDatabase : RoomDatabase() {
 
     abstract fun gameDao(): GameDao
     abstract fun saveStateDao(): SaveStateDao
+    abstract fun collectionDao(): CollectionDao
 
     companion object {
         @Volatile

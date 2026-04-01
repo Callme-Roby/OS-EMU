@@ -1,10 +1,16 @@
+@file:OptIn(ExperimentalFoundationApi::class)
 package com.osemu.app.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -14,535 +20,498 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.osemu.app.data.model.Badge
 import com.osemu.app.data.model.Game
-import com.osemu.app.data.model.IconStyle
 import com.osemu.app.ui.components.*
 import com.osemu.app.ui.theme.LocalOsEmuExtras
 import com.osemu.app.ui.theme.OsEmuColors
+import kotlinx.coroutines.launch
 
 /**
- * Main home screen with 3DS-inspired dual-panel layout.
+ * Main home screen with swipe navigation and Wii U-style widgets.
  */
 @Composable
 fun HomeScreen(
     recentGames: List<Game>,
     favoriteGames: List<Game>,
+    allGames: List<Game>,
     totalGameCount: Int,
     selectedGameIndex: Int?,
     onGameSelected: (Int) -> Unit,
     onGameLaunched: (Game) -> Unit,
+    onGameDetail: (Game) -> Unit,
     onNavigateToLibrary: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToThemes: () -> Unit,
+    onNavigateToCollections: () -> Unit,
+    onNavigateToBadges: () -> Unit,
+    onNavigateToMedia: () -> Unit,
     onScanGames: () -> Unit,
     onPickFolder: () -> Unit,
     isScanning: Boolean,
     scanStatus: String,
-    modifier: Modifier = Modifier
-) {
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
-    val extras = LocalOsEmuExtras.current
-
-    val selectedGame = selectedGameIndex?.let {
-        if (it < recentGames.size) recentGames[it] else null
-    }
-
-    if (isLandscape) {
-        Row(modifier = modifier.fillMaxSize()) {
-            TopScreenPanel(
-                selectedGame = selectedGame,
-                totalGameCount = totalGameCount,
-                modifier = Modifier
-                    .weight(0.45f)
-                    .fillMaxHeight()
-            )
-            BottomScreenPanel(
-                recentGames = recentGames,
-                favoriteGames = favoriteGames,
-                selectedGameIndex = selectedGameIndex,
-                onGameSelected = onGameSelected,
-                onGameLaunched = onGameLaunched,
-                onNavigateToLibrary = onNavigateToLibrary,
-                onNavigateToSettings = onNavigateToSettings,
-                onNavigateToThemes = onNavigateToThemes,
-                onScanGames = onScanGames,
-                onPickFolder = onPickFolder,
-                isScanning = isScanning,
-                scanStatus = scanStatus,
-                isLandscape = true,
-                modifier = Modifier
-                    .weight(0.55f)
-                    .fillMaxHeight()
-            )
-        }
-    } else {
-        Column(modifier = modifier.fillMaxSize()) {
-            TopScreenPanel(
-                selectedGame = selectedGame,
-                totalGameCount = totalGameCount,
-                modifier = Modifier
-                    .weight(0.38f)
-                    .fillMaxWidth()
-            )
-
-            HingeDivider()
-
-            BottomScreenPanel(
-                recentGames = recentGames,
-                favoriteGames = favoriteGames,
-                selectedGameIndex = selectedGameIndex,
-                onGameSelected = onGameSelected,
-                onGameLaunched = onGameLaunched,
-                onNavigateToLibrary = onNavigateToLibrary,
-                onNavigateToSettings = onNavigateToSettings,
-                onNavigateToThemes = onNavigateToThemes,
-                onScanGames = onScanGames,
-                onPickFolder = onPickFolder,
-                isScanning = isScanning,
-                scanStatus = scanStatus,
-                isLandscape = false,
-                modifier = Modifier
-                    .weight(0.62f)
-                    .fillMaxWidth()
-            )
-        }
-    }
-}
-
-@Composable
-private fun HingeDivider() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(4.dp)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        OsEmuColors.HingeDark,
-                        OsEmuColors.HingeLight,
-                        OsEmuColors.HingeDark
-                    )
-                )
-            )
-    )
-}
-
-/**
- * Top screen panel - blue gradient background with game info or branding.
- */
-@Composable
-private fun TopScreenPanel(
-    selectedGame: Game?,
-    totalGameCount: Int,
+    badges: List<Badge>,
     modifier: Modifier = Modifier
 ) {
     val extras = LocalOsEmuExtras.current
-
-    Column(
-        modifier = modifier
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        extras.topScreenGradientStart,
-                        extras.topScreenGradientEnd
-                    )
-                )
-            ),
-        verticalArrangement = Arrangement.SpaceBetween,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Status bar at very top
-        StatusBar3DS()
-
-        // Main content
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            AnimatedContent(
-                targetState = selectedGame,
-                transitionSpec = {
-                    fadeIn() + slideInVertically() togetherWith fadeOut() + slideOutVertically()
-                },
-                label = "topScreenContent"
-            ) { game ->
-                if (game != null) {
-                    GameInfoDisplay(game = game)
-                } else {
-                    WelcomeDisplay(totalGameCount = totalGameCount)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun GameInfoDisplay(game: Game) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Game icon placeholder
-        Surface(
-            modifier = Modifier.size(72.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = Color.White.copy(alpha = 0.2f)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = getConsoleIcon(game.console.manufacturer),
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(40.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = game.title,
-            style = MaterialTheme.typography.headlineSmall,
-            color = Color.White,
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // Console badge
-        Surface(
-            color = Color.White.copy(alpha = 0.2f),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Text(
-                text = game.console.displayName,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White
-            )
-        }
-
-        if (game.totalPlayTimeMs > 0) {
-            Spacer(modifier = Modifier.height(8.dp))
-            val hours = game.totalPlayTimeMs / 3_600_000
-            val minutes = (game.totalPlayTimeMs % 3_600_000) / 60_000
-            Text(
-                text = "Play time: ${hours}h ${minutes}m",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.8f)
-            )
-        }
-
-        if (game.favorite) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.Favorite,
-                    contentDescription = "Favorite",
-                    tint = OsEmuColors.Yellow,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "Favorite",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.9f)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun WelcomeDisplay(totalGameCount: Int) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Logo area
-        Surface(
-            modifier = Modifier.size(80.dp),
-            shape = RoundedCornerShape(20.dp),
-            color = Color.White.copy(alpha = 0.15f)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Default.Star,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = Color.White
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "OS-EMU",
-            style = MaterialTheme.typography.displaySmall,
-            color = Color.White,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = "Retro Emulator",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.7f),
-            fontWeight = FontWeight.Medium
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = if (totalGameCount > 0) "$totalGameCount games in library"
-            else "Add games to get started",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.6f)
-        )
-    }
-}
-
-/**
- * Bottom screen panel - icon grid with system apps and games.
- */
-@Composable
-private fun BottomScreenPanel(
-    recentGames: List<Game>,
-    favoriteGames: List<Game>,
-    selectedGameIndex: Int?,
-    onGameSelected: (Int) -> Unit,
-    onGameLaunched: (Game) -> Unit,
-    onNavigateToLibrary: () -> Unit,
-    onNavigateToSettings: () -> Unit,
-    onNavigateToThemes: () -> Unit,
-    onScanGames: () -> Unit,
-    onPickFolder: () -> Unit,
-    isScanning: Boolean,
-    scanStatus: String,
-    isLandscape: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val extras = LocalOsEmuExtras.current
-    var selectedTab by remember { mutableStateOf(0) }
+    val pagerState = rememberPagerState(pageCount = { 3 })
+    val scope = rememberCoroutineScope()
 
     val tabs = listOf(
         TabItem(Icons.Default.Home, "Home", "home"),
-        TabItem(Icons.Default.List, "Library", "library"),
         TabItem(Icons.Default.Favorite, "Favorites", "favorites"),
-        TabItem(Icons.Default.Settings, "Settings", "settings")
+        TabItem(Icons.Default.Star, "Badges", "badges")
     )
 
-    Column(
-        modifier = modifier.background(extras.bottomScreenBackground)
-    ) {
-        // Content area
+    Column(modifier = modifier.fillMaxSize()) {
+        // Top screen with gradient
         Box(
             modifier = Modifier
-                .weight(1f)
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .weight(0.32f)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            extras.topScreenGradientStart,
+                            extras.topScreenGradientEnd
+                        )
+                    )
+                )
         ) {
-            when (selectedTab) {
-                0 -> HomeIconGrid(
-                    recentGames = recentGames,
-                    selectedGameIndex = selectedGameIndex,
-                    onGameSelected = onGameSelected,
-                    onGameLaunched = onGameLaunched,
-                    onNavigateToLibrary = onNavigateToLibrary,
-                    onNavigateToSettings = onNavigateToSettings,
-                    onNavigateToThemes = onNavigateToThemes,
-                    onScanGames = onScanGames,
-                    onPickFolder = onPickFolder,
-                    isScanning = isScanning,
-                    scanStatus = scanStatus,
-                    isLandscape = isLandscape
-                )
-                1 -> {
-                    LaunchedEffect(Unit) { onNavigateToLibrary() }
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                StatusBar3DS()
+
+                // Animated content based on page
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val selectedGame = selectedGameIndex?.let {
+                        if (it < recentGames.size) recentGames[it] else null
+                    }
+
+                    AnimatedContent(
+                        targetState = pagerState.currentPage,
+                        transitionSpec = {
+                            fadeIn() togetherWith fadeOut()
+                        },
+                        label = "topContent"
+                    ) { page ->
+                        when (page) {
+                            0 -> {
+                                if (selectedGame != null) {
+                                    TopScreenGameInfo(game = selectedGame)
+                                } else {
+                                    TopScreenWelcome(totalGameCount = totalGameCount)
+                                }
+                            }
+                            1 -> TopScreenTitle("Favorites", "${favoriteGames.size} games")
+                            2 -> TopScreenTitle(
+                                "Badge Arcade",
+                                "${badges.count { it.isUnlocked }} / ${badges.size} unlocked"
+                            )
+                        }
+                    }
                 }
-                2 -> FavoriteIconGrid(
-                    favoriteGames = favoriteGames,
-                    onGameLaunched = onGameLaunched,
-                    isLandscape = isLandscape
-                )
-                3 -> {
-                    LaunchedEffect(Unit) { onNavigateToSettings() }
-                }
-            }
-        }
 
-        // Tab bar at bottom (like 3DS)
-        TabBar3DS(
-            tabs = tabs,
-            selectedIndex = selectedTab,
-            onTabSelected = { selectedTab = it }
-        )
-    }
-}
-
-@Composable
-private fun HomeIconGrid(
-    recentGames: List<Game>,
-    selectedGameIndex: Int?,
-    onGameSelected: (Int) -> Unit,
-    onGameLaunched: (Game) -> Unit,
-    onNavigateToLibrary: () -> Unit,
-    onNavigateToSettings: () -> Unit,
-    onNavigateToThemes: () -> Unit,
-    onScanGames: () -> Unit,
-    onPickFolder: () -> Unit,
-    isScanning: Boolean,
-    scanStatus: String,
-    isLandscape: Boolean
-) {
-    val columns = if (isLandscape) 6 else 4
-
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(columns),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(4.dp)
-    ) {
-        // System icons first row
-        item {
-            SystemIcon(
-                icon = Icons.Default.Folder,
-                label = "Library",
-                color = OsEmuColors.Orange,
-                onClick = onNavigateToLibrary
-            )
-        }
-        item {
-            SystemIcon(
-                icon = Icons.Default.Build,
-                label = "Settings",
-                color = OsEmuColors.Gray500,
-                onClick = onNavigateToSettings
-            )
-        }
-        item {
-            SystemIcon(
-                icon = Icons.Default.Palette,
-                label = "Themes",
-                color = OsEmuColors.Pink,
-                onClick = onNavigateToThemes
-            )
-        }
-        item {
-            SystemIcon(
-                icon = Icons.Default.Search,
-                label = "Auto Scan",
-                color = OsEmuColors.Green,
-                onClick = onScanGames
-            )
-        }
-
-        // Add folder picker icon
-        item {
-            SystemIcon(
-                icon = Icons.Default.Add,
-                label = "Add ROMs",
-                color = OsEmuColors.Blue500,
-                onClick = onPickFolder
-            )
-        }
-
-        // Scanning status
-        if (isScanning || scanStatus.isNotEmpty()) {
-            item(span = { GridItemSpan(columns) }) {
-                Surface(
+                // Page dots
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    color = OsEmuColors.Blue100,
-                    shape = RoundedCornerShape(8.dp)
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (isScanning) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                                color = OsEmuColors.Blue500
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Text(
-                            text = scanStatus.ifEmpty { "Scanning..." },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = OsEmuColors.Blue700
+                    repeat(3) { index ->
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 3.dp)
+                                .size(if (pagerState.currentPage == index) 8.dp else 5.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (pagerState.currentPage == index)
+                                        Color.White
+                                    else Color.White.copy(alpha = 0.3f)
+                                )
                         )
                     }
                 }
             }
         }
 
-        // Recent games
-        if (recentGames.isNotEmpty()) {
-            item(span = { GridItemSpan(columns) }) {
-                Text(
-                    text = "Recently Played",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)
+        // Hinge
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(OsEmuColors.HingeDark, OsEmuColors.HingeLight, OsEmuColors.HingeDark)
+                    )
                 )
+        )
+
+        // Bottom screen - swipe pages
+        Column(
+            modifier = Modifier
+                .weight(0.68f)
+                .fillMaxWidth()
+                .background(extras.bottomScreenBackground)
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.weight(1f)
+            ) { page ->
+                when (page) {
+                    0 -> HomePageContent(
+                        recentGames = recentGames,
+                        allGames = allGames,
+                        totalGameCount = totalGameCount,
+                        favoriteGames = favoriteGames,
+                        onGameSelected = onGameSelected,
+                        onGameLaunched = onGameLaunched,
+                        onGameDetail = onGameDetail,
+                        onNavigateToLibrary = onNavigateToLibrary,
+                        onNavigateToSettings = onNavigateToSettings,
+                        onNavigateToThemes = onNavigateToThemes,
+                        onNavigateToCollections = onNavigateToCollections,
+                        onNavigateToBadges = onNavigateToBadges,
+                        onNavigateToMedia = onNavigateToMedia,
+                        onScanGames = onScanGames,
+                        onPickFolder = onPickFolder,
+                        isScanning = isScanning,
+                        scanStatus = scanStatus
+                    )
+                    1 -> FavoritesPageContent(
+                        favoriteGames = favoriteGames,
+                        onGameLaunched = onGameLaunched,
+                        onGameDetail = onGameDetail
+                    )
+                    2 -> BadgesPreviewContent(
+                        badges = badges,
+                        onNavigateToBadges = onNavigateToBadges
+                    )
+                }
             }
 
-            itemsIndexed(recentGames.take(12)) { index, game ->
-                GameIcon(
-                    game = game,
-                    isSelected = selectedGameIndex == index,
-                    onClick = {
-                        onGameSelected(index)
-                        onGameLaunched(game)
+            // Bottom tab bar
+            TabBar3DS(
+                tabs = tabs,
+                selectedIndex = pagerState.currentPage,
+                onTabSelected = { index ->
+                    scope.launch { pagerState.animateScrollToPage(index) }
+                }
+            )
+        }
+    }
+}
+
+// ==================== Top Screen Content ====================
+
+@Composable
+private fun TopScreenWelcome(totalGameCount: Int) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Surface(
+            modifier = Modifier.size(64.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White.copy(alpha = 0.15f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = null,
+                    modifier = Modifier.size(36.dp),
+                    tint = Color.White
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text("OS-EMU", style = MaterialTheme.typography.headlineSmall,
+            color = Color.White, fontWeight = FontWeight.Bold)
+        Text("Retro Emulator", fontSize = 12.sp,
+            color = Color.White.copy(alpha = 0.6f))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            if (totalGameCount > 0) "$totalGameCount games" else "Add games to start",
+            fontSize = 11.sp, color = Color.White.copy(alpha = 0.5f)
+        )
+    }
+}
+
+@Composable
+private fun TopScreenGameInfo(game: Game) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Surface(
+            modifier = Modifier.size(56.dp),
+            shape = RoundedCornerShape(14.dp),
+            color = Color.White.copy(alpha = 0.2f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    getConsoleIcon(game.console.manufacturer), null,
+                    tint = Color.White, modifier = Modifier.size(30.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(game.title, style = MaterialTheme.typography.titleMedium,
+            color = Color.White, fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center, maxLines = 2)
+        Spacer(modifier = Modifier.height(4.dp))
+        Surface(color = Color.White.copy(alpha = 0.2f), shape = RoundedCornerShape(12.dp)) {
+            Text(game.console.displayName,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+                fontSize = 11.sp, color = Color.White)
+        }
+    }
+}
+
+@Composable
+private fun TopScreenTitle(title: String, subtitle: String) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Text(title, style = MaterialTheme.typography.headlineSmall,
+            color = Color.White, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(subtitle, fontSize = 13.sp, color = Color.White.copy(alpha = 0.6f))
+    }
+}
+
+// ==================== Bottom Screen Pages ====================
+
+@Composable
+private fun HomePageContent(
+    recentGames: List<Game>,
+    allGames: List<Game>,
+    totalGameCount: Int,
+    favoriteGames: List<Game>,
+    onGameSelected: (Int) -> Unit,
+    onGameLaunched: (Game) -> Unit,
+    onGameDetail: (Game) -> Unit,
+    onNavigateToLibrary: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToThemes: () -> Unit,
+    onNavigateToCollections: () -> Unit,
+    onNavigateToBadges: () -> Unit,
+    onNavigateToMedia: () -> Unit,
+    onScanGames: () -> Unit,
+    onPickFolder: () -> Unit,
+    isScanning: Boolean,
+    scanStatus: String
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // Quick launch grid
+        WidgetCard(
+            title = "Quick Launch",
+            icon = Icons.Default.Apps,
+            accentColor = OsEmuColors.Blue500
+        ) {
+            QuickLaunchGrid(
+                onLibrary = onNavigateToLibrary,
+                onCollections = onNavigateToCollections,
+                onBadges = onNavigateToBadges,
+                onMedia = onNavigateToMedia,
+                onThemes = onNavigateToThemes,
+                onSettings = onNavigateToSettings
+            )
+        }
+
+        // Scan / Add ROMs
+        if (totalGameCount == 0 || isScanning || scanStatus.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = OsEmuColors.Blue100
+                )
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    if (isScanning) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp, color = OsEmuColors.Blue500
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(scanStatus.ifEmpty { "Scanning..." },
+                                fontSize = 12.sp, color = OsEmuColors.Blue700)
+                        }
+                    } else if (scanStatus.isNotEmpty()) {
+                        Text(scanStatus, fontSize = 12.sp, color = OsEmuColors.Blue700)
                     }
+
+                    if (totalGameCount == 0) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = onScanGames,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.Search, null, Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Auto Scan", fontSize = 12.sp)
+                            }
+                            Button(
+                                onClick = onPickFolder,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Default.Add, null, Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Add ROMs", fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Stats widget
+        if (totalGameCount > 0) {
+            WidgetCard(
+                title = "Statistics",
+                icon = Icons.Default.Info,
+                accentColor = OsEmuColors.Green
+            ) {
+                val totalPlayTime = allGames.sumOf { it.totalPlayTimeMs }
+                val consolesUsed = allGames.map { it.console }.distinct().size
+                StatsWidgetContent(
+                    totalGames = totalGameCount,
+                    totalPlayTimeMs = totalPlayTime,
+                    favoriteCount = favoriteGames.size,
+                    consolesUsed = consolesUsed
                 )
             }
         }
 
-        // Empty state with helper
-        if (recentGames.isEmpty()) {
-            item(span = { GridItemSpan(columns) }) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+        // Recently played widget
+        if (recentGames.isNotEmpty()) {
+            WidgetCard(
+                title = "Recently Played",
+                icon = Icons.Default.History,
+                accentColor = OsEmuColors.Orange,
+                onSeeAll = onNavigateToLibrary
+            ) {
+                GameCarousel(
+                    games = recentGames.take(10),
+                    onGameClick = { game -> onGameDetail(game) }
+                )
+            }
+        }
+
+        // Favorites widget
+        if (favoriteGames.isNotEmpty()) {
+            WidgetCard(
+                title = "Favorites",
+                icon = Icons.Default.Favorite,
+                accentColor = OsEmuColors.Red
+            ) {
+                GameCarousel(
+                    games = favoriteGames.take(10),
+                    onGameClick = { game -> onGameDetail(game) }
+                )
+            }
+        }
+
+        // Add ROMs button at bottom
+        if (totalGameCount > 0) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onScanGames,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Icon(
-                        Icons.Default.Star,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "No games yet",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Tap \"Add ROMs\" to select a folder",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+                    Icon(Icons.Default.Search, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Scan", fontSize = 12.sp)
+                }
+                OutlinedButton(
+                    onClick = onPickFolder,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Add, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Add ROMs", fontSize = 12.sp)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun FavoritesPageContent(
+    favoriteGames: List<Game>,
+    onGameLaunched: (Game) -> Unit,
+    onGameDetail: (Game) -> Unit
+) {
+    if (favoriteGames.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Default.FavoriteBorder, null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f))
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("No favorites yet", style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
+                Text("Long press a game to add it", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f))
+            }
+        }
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Group by console
+            val grouped = favoriteGames.groupBy { it.console }
+            grouped.forEach { (console, games) ->
+                WidgetCard(
+                    title = console.displayName,
+                    icon = Icons.Default.Star,
+                    accentColor = getConsoleTint(console.manufacturer)
+                ) {
+                    GameCarousel(
+                        games = games,
+                        onGameClick = { onGameDetail(it) }
                     )
                 }
             }
@@ -551,46 +520,76 @@ private fun HomeIconGrid(
 }
 
 @Composable
-private fun FavoriteIconGrid(
-    favoriteGames: List<Game>,
-    onGameLaunched: (Game) -> Unit,
-    isLandscape: Boolean
+private fun BadgesPreviewContent(
+    badges: List<Badge>,
+    onNavigateToBadges: () -> Unit
 ) {
-    val columns = if (isLandscape) 6 else 4
-
-    if (favoriteGames.isEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    Icons.Default.FavoriteBorder,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "No favorites yet",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // Unlocked badges
+        val unlocked = badges.filter { it.isUnlocked }
+        if (unlocked.isNotEmpty()) {
+            WidgetCard(
+                title = "Unlocked (${unlocked.size})",
+                icon = Icons.Default.CheckCircle,
+                accentColor = OsEmuColors.Green,
+                onSeeAll = onNavigateToBadges
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    unlocked.take(6).forEach { badge ->
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(badge.iconEmoji, fontSize = 24.sp)
+                            Text(badge.name, fontSize = 8.sp, maxLines = 1,
+                                textAlign = TextAlign.Center)
+                        }
+                    }
+                }
             }
         }
-    } else {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(4.dp)
+
+        // Next badges to unlock
+        val locked = badges.filter { !it.isUnlocked }.take(6)
+        WidgetCard(
+            title = "Next Badges",
+            icon = Icons.Default.Lock,
+            accentColor = OsEmuColors.Gray500,
+            onSeeAll = onNavigateToBadges
         ) {
-            items(favoriteGames) { game ->
-                GameIcon(
-                    game = game,
-                    onClick = { onGameLaunched(game) }
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                locked.forEach { badge ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("?", fontSize = 24.sp,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f))
+                        Text(badge.name, fontSize = 8.sp, maxLines = 1,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
+                    }
+                }
             }
+        }
+
+        Button(
+            onClick = onNavigateToBadges,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Default.Star, null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("View All Badges")
         }
     }
 }
