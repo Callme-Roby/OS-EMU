@@ -85,14 +85,16 @@ fun buildColorScheme(theme: AppTheme, isDark: Boolean): ColorScheme {
 
 // Custom theme extensions for 3DS-specific styling
 data class OsEmuThemeExtras(
-    val topScreenBackground: Color = OsEmuColors.GrayLight,
-    val bottomScreenBackground: Color = OsEmuColors.White,
+    val topScreenGradientStart: Color = OsEmuColors.TopScreenGradientStart,
+    val topScreenGradientEnd: Color = OsEmuColors.TopScreenGradientEnd,
+    val topScreenBackground: Color = OsEmuColors.TopScreenGradientStart,
+    val bottomScreenBackground: Color = OsEmuColors.BottomScreenBg,
     val statusBarColor: Color = OsEmuColors.StatusBarBlue,
-    val iconBackgroundColor: Color = OsEmuColors.White,
-    val iconBorderColor: Color = OsEmuColors.Gray200,
-    val tabBarColor: Color = OsEmuColors.Blue500,
-    val selectedTabColor: Color = Color.White,
-    val unselectedTabColor: Color = OsEmuColors.Blue200
+    val iconBackgroundColor: Color = OsEmuColors.IconCardBg,
+    val iconBorderColor: Color = OsEmuColors.IconCardBorder,
+    val tabBarColor: Color = OsEmuColors.TabBarBg,
+    val selectedTabColor: Color = OsEmuColors.TabSelected,
+    val unselectedTabColor: Color = OsEmuColors.TabUnselected
 )
 
 val LocalOsEmuExtras = staticCompositionLocalOf { OsEmuThemeExtras() }
@@ -111,6 +113,8 @@ fun OsEmuTheme(
 
     val extras = if (darkTheme || appTheme == AppTheme.DARK) {
         OsEmuThemeExtras(
+            topScreenGradientStart = OsEmuColors.DarkSurfaceVariant,
+            topScreenGradientEnd = OsEmuColors.DarkBg,
             topScreenBackground = OsEmuColors.DarkBg,
             bottomScreenBackground = OsEmuColors.DarkSurface,
             statusBarColor = OsEmuColors.DarkSurfaceVariant,
@@ -122,14 +126,16 @@ fun OsEmuTheme(
         )
     } else {
         OsEmuThemeExtras(
+            topScreenGradientStart = Color(appTheme.primaryColor).copy(alpha = 0.8f),
+            topScreenGradientEnd = Color(appTheme.primaryColor),
             topScreenBackground = Color(appTheme.backgroundColor),
             bottomScreenBackground = Color(appTheme.surfaceColor),
             statusBarColor = Color(appTheme.primaryColor),
             iconBackgroundColor = Color(appTheme.surfaceColor),
             iconBorderColor = OsEmuColors.Gray200,
-            tabBarColor = Color(appTheme.primaryColor),
-            selectedTabColor = Color.White,
-            unselectedTabColor = Color(appTheme.secondaryColor)
+            tabBarColor = OsEmuColors.TabBarBg,
+            selectedTabColor = Color(appTheme.primaryColor),
+            unselectedTabColor = OsEmuColors.TabUnselected
         )
     }
 
@@ -137,8 +143,8 @@ fun OsEmuTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            window.statusBarColor = extras.topScreenGradientEnd.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
         }
     }
 

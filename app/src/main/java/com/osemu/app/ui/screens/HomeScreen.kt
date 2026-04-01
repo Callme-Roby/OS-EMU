@@ -19,7 +19,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.osemu.app.data.model.Console
 import com.osemu.app.data.model.Game
 import com.osemu.app.data.model.IconStyle
 import com.osemu.app.ui.components.*
@@ -28,12 +27,6 @@ import com.osemu.app.ui.theme.OsEmuColors
 
 /**
  * Main home screen with 3DS-inspired dual-panel layout.
- *
- * Portrait: Top panel (info/preview) + Bottom panel (icon grid)
- * Landscape: Left panel (info) + Right panel (icon grid)
- *
- * This mimics the 3DS home menu with its upper screen showing
- * game info and lower screen showing the icon grid.
  */
 @Composable
 fun HomeScreen(
@@ -47,6 +40,9 @@ fun HomeScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToThemes: () -> Unit,
     onScanGames: () -> Unit,
+    onPickFolder: () -> Unit,
+    isScanning: Boolean,
+    scanStatus: String,
     modifier: Modifier = Modifier
 ) {
     val configuration = LocalConfiguration.current
@@ -58,9 +54,7 @@ fun HomeScreen(
     }
 
     if (isLandscape) {
-        // Landscape: side-by-side panels (like 3DS held sideways)
         Row(modifier = modifier.fillMaxSize()) {
-            // Left panel = "Top screen" showing game info
             TopScreenPanel(
                 selectedGame = selectedGame,
                 totalGameCount = totalGameCount,
@@ -68,8 +62,6 @@ fun HomeScreen(
                     .weight(0.45f)
                     .fillMaxHeight()
             )
-
-            // Right panel = "Bottom screen" with icon grid
             BottomScreenPanel(
                 recentGames = recentGames,
                 favoriteGames = favoriteGames,
@@ -80,6 +72,9 @@ fun HomeScreen(
                 onNavigateToSettings = onNavigateToSettings,
                 onNavigateToThemes = onNavigateToThemes,
                 onScanGames = onScanGames,
+                onPickFolder = onPickFolder,
+                isScanning = isScanning,
+                scanStatus = scanStatus,
                 isLandscape = true,
                 modifier = Modifier
                     .weight(0.55f)
@@ -87,21 +82,17 @@ fun HomeScreen(
             )
         }
     } else {
-        // Portrait: stacked panels (classic 3DS layout)
         Column(modifier = modifier.fillMaxSize()) {
-            // Top screen
             TopScreenPanel(
                 selectedGame = selectedGame,
                 totalGameCount = totalGameCount,
                 modifier = Modifier
-                    .weight(0.40f)
+                    .weight(0.38f)
                     .fillMaxWidth()
             )
 
-            // Divider mimicking 3DS hinge
             HingeDivider()
 
-            // Bottom screen
             BottomScreenPanel(
                 recentGames = recentGames,
                 favoriteGames = favoriteGames,
@@ -112,9 +103,12 @@ fun HomeScreen(
                 onNavigateToSettings = onNavigateToSettings,
                 onNavigateToThemes = onNavigateToThemes,
                 onScanGames = onScanGames,
+                onPickFolder = onPickFolder,
+                isScanning = isScanning,
+                scanStatus = scanStatus,
                 isLandscape = false,
                 modifier = Modifier
-                    .weight(0.60f)
+                    .weight(0.62f)
                     .fillMaxWidth()
             )
         }
@@ -126,13 +120,13 @@ private fun HingeDivider() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(6.dp)
+            .height(4.dp)
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        OsEmuColors.Gray300,
-                        OsEmuColors.Gray200,
-                        OsEmuColors.Gray300
+                        OsEmuColors.HingeDark,
+                        OsEmuColors.HingeLight,
+                        OsEmuColors.HingeDark
                     )
                 )
             )
@@ -140,7 +134,7 @@ private fun HingeDivider() {
 }
 
 /**
- * Top screen panel - shows selected game info or welcome screen.
+ * Top screen panel - blue gradient background with game info or branding.
  */
 @Composable
 private fun TopScreenPanel(
@@ -152,28 +146,40 @@ private fun TopScreenPanel(
 
     Column(
         modifier = modifier
-            .background(extras.topScreenBackground)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        extras.topScreenGradientStart,
+                        extras.topScreenGradientEnd
+                    )
+                )
+            ),
+        verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Status bar at very top
         StatusBar3DS()
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        AnimatedContent(
-            targetState = selectedGame,
-            transitionSpec = {
-                fadeIn() + slideInVertically() togetherWith fadeOut() + slideOutVertically()
-            },
-            label = "topScreenContent"
-        ) { game ->
-            if (game != null) {
-                // Selected game info
-                GameInfoDisplay(game = game)
-            } else {
-                // Welcome / idle screen
-                WelcomeDisplay(totalGameCount = totalGameCount)
+        // Main content
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            AnimatedContent(
+                targetState = selectedGame,
+                transitionSpec = {
+                    fadeIn() + slideInVertically() togetherWith fadeOut() + slideOutVertically()
+                },
+                label = "topScreenContent"
+            ) { game ->
+                if (game != null) {
+                    GameInfoDisplay(game = game)
+                } else {
+                    WelcomeDisplay(totalGameCount = totalGameCount)
+                }
             }
         }
     }
@@ -186,58 +192,73 @@ private fun GameInfoDisplay(game: Game) {
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxSize()
     ) {
-        // Game title
+        // Game icon placeholder
+        Surface(
+            modifier = Modifier.size(72.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White.copy(alpha = 0.2f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = getConsoleIcon(game.console.manufacturer),
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         Text(
             text = game.title,
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.onBackground,
+            style = MaterialTheme.typography.headlineSmall,
+            color = Color.White,
             textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Bold,
             maxLines = 2
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         // Console badge
         Surface(
-            color = MaterialTheme.colorScheme.primaryContainer,
+            color = Color.White.copy(alpha = 0.2f),
             shape = RoundedCornerShape(16.dp)
         ) {
             Text(
                 text = game.console.displayName,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = Color.White
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Play time & last played
         if (game.totalPlayTimeMs > 0) {
+            Spacer(modifier = Modifier.height(8.dp))
             val hours = game.totalPlayTimeMs / 3_600_000
             val minutes = (game.totalPlayTimeMs % 3_600_000) / 60_000
             Text(
                 text = "Play time: ${hours}h ${minutes}m",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.8f)
             )
         }
 
-        // Favorite indicator
         if (game.favorite) {
             Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Default.Favorite,
                     contentDescription = "Favorite",
-                    tint = OsEmuColors.Red,
+                    tint = OsEmuColors.Yellow,
                     modifier = Modifier.size(14.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "Favorite",
                     style = MaterialTheme.typography.labelSmall,
-                    color = OsEmuColors.Red
+                    color = Color.White.copy(alpha = 0.9f)
                 )
             }
         }
@@ -251,29 +272,47 @@ private fun WelcomeDisplay(totalGameCount: Int) {
         verticalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxSize()
     ) {
-        Icon(
-            imageVector = Icons.Default.Star,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-        )
+        // Logo area
+        Surface(
+            modifier = Modifier.size(80.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White.copy(alpha = 0.15f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = Color.White
+                )
+            }
+        }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = "OS-EMU",
-            style = MaterialTheme.typography.displayMedium,
-            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.displaySmall,
+            color = Color.White,
             fontWeight = FontWeight.Bold
         )
 
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
+            text = "Retro Emulator",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.7f),
+            fontWeight = FontWeight.Medium
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
             text = if (totalGameCount > 0) "$totalGameCount games in library"
             else "Add games to get started",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White.copy(alpha = 0.6f)
         )
     }
 }
@@ -292,6 +331,9 @@ private fun BottomScreenPanel(
     onNavigateToSettings: () -> Unit,
     onNavigateToThemes: () -> Unit,
     onScanGames: () -> Unit,
+    onPickFolder: () -> Unit,
+    isScanning: Boolean,
+    scanStatus: String,
     isLandscape: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -308,18 +350,12 @@ private fun BottomScreenPanel(
     Column(
         modifier = modifier.background(extras.bottomScreenBackground)
     ) {
-        // Tab bar at top
-        TabBar3DS(
-            tabs = tabs,
-            selectedIndex = selectedTab,
-            onTabSelected = { selectedTab = it }
-        )
-
         // Content area
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp)
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             when (selectedTab) {
                 0 -> HomeIconGrid(
@@ -331,10 +367,12 @@ private fun BottomScreenPanel(
                     onNavigateToSettings = onNavigateToSettings,
                     onNavigateToThemes = onNavigateToThemes,
                     onScanGames = onScanGames,
+                    onPickFolder = onPickFolder,
+                    isScanning = isScanning,
+                    scanStatus = scanStatus,
                     isLandscape = isLandscape
                 )
                 1 -> {
-                    // Navigate to full library
                     LaunchedEffect(Unit) { onNavigateToLibrary() }
                 }
                 2 -> FavoriteIconGrid(
@@ -347,6 +385,13 @@ private fun BottomScreenPanel(
                 }
             }
         }
+
+        // Tab bar at bottom (like 3DS)
+        TabBar3DS(
+            tabs = tabs,
+            selectedIndex = selectedTab,
+            onTabSelected = { selectedTab = it }
+        )
     }
 }
 
@@ -360,6 +405,9 @@ private fun HomeIconGrid(
     onNavigateToSettings: () -> Unit,
     onNavigateToThemes: () -> Unit,
     onScanGames: () -> Unit,
+    onPickFolder: () -> Unit,
+    isScanning: Boolean,
+    scanStatus: String,
     isLandscape: Boolean
 ) {
     val columns = if (isLandscape) 6 else 4
@@ -398,10 +446,52 @@ private fun HomeIconGrid(
         item {
             SystemIcon(
                 icon = Icons.Default.Search,
-                label = "Scan",
+                label = "Auto Scan",
                 color = OsEmuColors.Green,
                 onClick = onScanGames
             )
+        }
+
+        // Add folder picker icon
+        item {
+            SystemIcon(
+                icon = Icons.Default.Add,
+                label = "Add ROMs",
+                color = OsEmuColors.Blue500,
+                onClick = onPickFolder
+            )
+        }
+
+        // Scanning status
+        if (isScanning || scanStatus.isNotEmpty()) {
+            item(span = { GridItemSpan(columns) }) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    color = OsEmuColors.Blue100,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (isScanning) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = OsEmuColors.Blue500
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(
+                            text = scanStatus.ifEmpty { "Scanning..." },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = OsEmuColors.Blue700
+                        )
+                    }
+                }
+            }
         }
 
         // Recent games
@@ -424,6 +514,37 @@ private fun HomeIconGrid(
                         onGameLaunched(game)
                     }
                 )
+            }
+        }
+
+        // Empty state with helper
+        if (recentGames.isEmpty()) {
+            item(span = { GridItemSpan(columns) }) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "No games yet",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Tap \"Add ROMs\" to select a folder",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+                    )
+                }
             }
         }
     }

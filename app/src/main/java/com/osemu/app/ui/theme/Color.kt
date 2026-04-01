@@ -37,7 +37,7 @@ object OsEmuColors {
     val Purple = Color(0xFF7C4DFF)
 
     // 3DS status bar
-    val StatusBarBlue = Color(0xFF2196F3)
+    val StatusBarBlue = Color(0xFF1976D2)
     val StatusBarGreen = Color(0xFF43A047)
 
     // Console brand colors
@@ -45,9 +45,24 @@ object OsEmuColors {
     val SegaBlue = Color(0xFF0060A8)
     val SonyBlue = Color(0xFF003087)
 
-    // 3DS-style gradients
-    val TopScreenGradientStart = Color(0xFFE8F5E9)
-    val TopScreenGradientEnd = Color(0xFFC8E6C9)
-    val BottomScreenGradientStart = Color(0xFFF5F5F5)
-    val BottomScreenGradientEnd = Color(0xFFEEEEEE)
+    // 3DS-style top screen gradient (blue theme)
+    val TopScreenGradientStart = Color(0xFF42A5F5)
+    val TopScreenGradientEnd = Color(0xFF1976D2)
+
+    // Bottom screen
+    val BottomScreenBg = Color(0xFFF8F9FA)
+
+    // Hinge / divider
+    val HingeLight = Color(0xFFCFD8DC)
+    val HingeDark = Color(0xFFB0BEC5)
+
+    // Tab bar
+    val TabBarBg = Color(0xFFECEFF1)
+    val TabSelected = Color(0xFF1976D2)
+    val TabUnselected = Color(0xFF90A4AE)
+
+    // Icon card
+    val IconCardBg = Color(0xFFFFFFFF)
+    val IconCardBorder = Color(0xFFE0E0E0)
+    val IconCardShadow = Color(0x1A000000)
 }

@@ -2,7 +2,6 @@ package com.osemu.app.ui.navigation
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -23,6 +22,7 @@ sealed class Screen(val route: String) {
 @Composable
 fun AppNavigation(
     appViewModel: AppViewModel,
+    onPickFolder: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
@@ -52,7 +52,10 @@ fun AppNavigation(
                 onNavigateToThemes = {
                     navController.navigate(Screen.Themes.route)
                 },
-                onScanGames = { appViewModel.scanDefaultPaths() }
+                onScanGames = { appViewModel.scanDefaultPaths() },
+                onPickFolder = onPickFolder,
+                isScanning = uiState.isScanning,
+                scanStatus = uiState.scanStatus
             )
         }
 

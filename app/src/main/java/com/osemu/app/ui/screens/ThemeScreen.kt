@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Brush
 import com.osemu.app.data.model.Theme
 import com.osemu.app.ui.theme.LocalOsEmuExtras
 
@@ -38,19 +39,32 @@ fun ThemeScreen(
     val extras = LocalOsEmuExtras.current
 
     Column(modifier = modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("HOME Menu Settings") },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = extras.statusBarColor,
-                titleContentColor = Color.White,
-                navigationIconContentColor = Color.White
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            extras.topScreenGradientStart,
+                            extras.topScreenGradientEnd
+                        )
+                    )
+                )
+        ) {
+            TopAppBar(
+                title = { Text("HOME Menu Settings") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                )
             )
-        )
+        }
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),

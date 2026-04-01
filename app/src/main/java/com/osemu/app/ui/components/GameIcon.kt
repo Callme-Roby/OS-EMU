@@ -27,6 +27,7 @@ import coil.compose.AsyncImage
 import com.osemu.app.data.model.Game
 import com.osemu.app.data.model.IconStyle
 import com.osemu.app.ui.theme.LocalOsEmuExtras
+import com.osemu.app.ui.theme.OsEmuColors
 
 /**
  * 3DS-style app icon tile used in home menu grids.
@@ -35,26 +36,34 @@ import com.osemu.app.ui.theme.LocalOsEmuExtras
 fun GameIcon(
     game: Game,
     isSelected: Boolean = false,
-    iconSize: Dp = 64.dp,
+    iconSize: Dp = 60.dp,
     iconStyle: IconStyle = IconStyle.ROUNDED,
     onClick: () -> Unit = {}
 ) {
     val extras = LocalOsEmuExtras.current
     val shape = when (iconStyle) {
-        IconStyle.ROUNDED -> RoundedCornerShape(12.dp)
+        IconStyle.ROUNDED -> RoundedCornerShape(14.dp)
         IconStyle.SQUARE -> RoundedCornerShape(4.dp)
         IconStyle.CIRCLE -> RoundedCornerShape(50)
-        IconStyle.SQUIRCLE -> RoundedCornerShape(16.dp)
+        IconStyle.SQUIRCLE -> RoundedCornerShape(18.dp)
     }
 
     val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.15f else 1.0f,
+        targetValue = if (isSelected) 1.1f else 1.0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
         ),
         label = "iconScale"
     )
+
+    // Console-specific colors for icon background
+    val iconBgColor = when (game.console.manufacturer) {
+        "Nintendo" -> Color(0xFFE8F5E9)
+        "Sega" -> Color(0xFFE3F2FD)
+        "Sony" -> Color(0xFFEDE7F6)
+        else -> extras.iconBackgroundColor
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -67,14 +76,14 @@ fun GameIcon(
             modifier = Modifier
                 .size(iconSize)
                 .scale(scale)
-                .shadow(if (isSelected) 8.dp else 2.dp, shape)
+                .shadow(if (isSelected) 6.dp else 2.dp, shape)
                 .clip(shape)
-                .background(extras.iconBackgroundColor)
+                .background(if (game.boxArtPath != null) Color.Transparent else iconBgColor)
                 .then(
                     if (isSelected) {
                         Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape)
                     } else {
-                        Modifier.border(1.dp, extras.iconBorderColor, shape)
+                        Modifier.border(0.5.dp, extras.iconBorderColor, shape)
                     }
                 ),
             contentAlignment = Alignment.Center
@@ -87,17 +96,16 @@ fun GameIcon(
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                // Default icon based on console
                 Icon(
                     imageVector = getConsoleIcon(game.console.manufacturer),
                     contentDescription = game.title,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(iconSize * 0.5f)
+                    tint = getConsoleTint(game.console.manufacturer),
+                    modifier = Modifier.size(iconSize * 0.45f)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(3.dp))
 
         Text(
             text = game.title,
@@ -105,13 +113,14 @@ fun GameIcon(
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
+            lineHeight = 12.sp,
             color = MaterialTheme.colorScheme.onBackground
         )
     }
 }
 
 /**
- * System menu icon (Settings, eShop-style, etc.)
+ * System menu icon (Settings, Library, etc.)
  */
 @Composable
 fun SystemIcon(
@@ -125,14 +134,14 @@ fun SystemIcon(
 ) {
     val extras = LocalOsEmuExtras.current
     val shape = when (iconStyle) {
-        IconStyle.ROUNDED -> RoundedCornerShape(12.dp)
+        IconStyle.ROUNDED -> RoundedCornerShape(14.dp)
         IconStyle.SQUARE -> RoundedCornerShape(4.dp)
         IconStyle.CIRCLE -> RoundedCornerShape(50)
-        IconStyle.SQUIRCLE -> RoundedCornerShape(16.dp)
+        IconStyle.SQUIRCLE -> RoundedCornerShape(18.dp)
     }
 
     val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.15f else 1.0f,
+        targetValue = if (isSelected) 1.1f else 1.0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
@@ -158,7 +167,7 @@ fun SystemIcon(
                     if (isSelected) {
                         Modifier.border(2.dp, color, shape)
                     } else {
-                        Modifier.border(1.dp, extras.iconBorderColor, shape)
+                        Modifier.border(0.5.dp, extras.iconBorderColor, shape)
                     }
                 ),
             contentAlignment = Alignment.Center
@@ -167,18 +176,19 @@ fun SystemIcon(
                 imageVector = icon,
                 contentDescription = label,
                 tint = color,
-                modifier = Modifier.size(iconSize * 0.5f)
+                modifier = Modifier.size(iconSize * 0.45f)
             )
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(3.dp))
 
         Text(
             text = label,
-            fontSize = 9.sp,
+            fontSize = 10.sp,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            lineHeight = 12.sp,
             color = MaterialTheme.colorScheme.onBackground
         )
     }
@@ -190,5 +200,14 @@ fun getConsoleIcon(manufacturer: String): ImageVector {
         "Sega" -> Icons.Default.Star
         "Sony" -> Icons.Default.Star
         else -> Icons.Default.Star
+    }
+}
+
+fun getConsoleTint(manufacturer: String): Color {
+    return when (manufacturer) {
+        "Nintendo" -> OsEmuColors.Red
+        "Sega" -> OsEmuColors.Blue600
+        "Sony" -> OsEmuColors.Purple
+        else -> OsEmuColors.Blue500
     }
 }

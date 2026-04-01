@@ -1,6 +1,8 @@
 package com.osemu.app.ui.navigation
 
 import android.app.Application
+import android.net.Uri
+import android.os.Environment
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.osemu.app.core.EmulatorEngine
@@ -12,6 +14,7 @@ import com.osemu.app.data.repository.GameRepository
 import com.osemu.app.data.repository.SettingsRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 
 data class AppUiState(
     val allGames: List<Game> = emptyList(),
@@ -174,14 +177,12 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         val sessionMs = System.currentTimeMillis() - sessionStartTime
         val currentGame = _uiState.value.currentGame
 
-        // Auto-save on exit
         if (_uiState.value.autoSaveEnabled) {
             emulatorEngine.autoSave()
         }
 
         emulatorEngine.stop()
 
-        // Record play session
         if (currentGame != null && sessionMs > 0) {
             viewModelScope.launch {
                 gameRepository.recordPlaySession(currentGame.id, sessionMs)
@@ -250,16 +251,44 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // --- Scanning ---
+
+    /**
+     * Scans common ROM directories on the device.
+     * Covers most popular locations where users store ROMs.
+     */
     fun scanDefaultPaths() {
         viewModelScope.launch {
+            val storage = Environment.getExternalStorageDirectory().absolutePath
             val defaultPaths = listOf(
-                "/storage/emulated/0/Roms",
-                "/storage/emulated/0/ROMs",
-                "/storage/emulated/0/Download/Roms",
-                "/storage/emulated/0/RetroArch/roms"
+                "$storage/Roms",
+                "$storage/ROMs",
+                "$storage/roms",
+                "$storage/Download",
+                "$storage/Download/Roms",
+                "$storage/Download/ROMs",
+                "$storage/Downloads",
+                "$storage/Downloads/Roms",
+                "$storage/Downloads/ROMs",
+                "$storage/RetroArch/roms",
+                "$storage/RetroArch/ROMs",
+                "$storage/Games",
+                "$storage/games",
+                "$storage/Emulation",
+                "$storage/Emulation/roms",
+                "$storage/Documents/Roms",
+                "$storage/Documents/ROMs"
             )
             for (path in defaultPaths) {
-                gameScanner.scanDirectory(path)
+                if (File(path).exists()) {
+                    gameScanner.scanDirectory(path)
+                }
+            }
+
+            // If nothing was found, update status
+            if (_uiState.value.totalGameCount == 0 && !_uiState.value.isScanning) {
+                _uiState.update {
+                    it.copy(scanStatus = "No ROMs found. Use \"Add ROMs\" to pick a folder.")
+                }
             }
         }
     }
@@ -267,6 +296,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun scanPath(path: String) {
         viewModelScope.launch {
             gameScanner.scanDirectory(path)
+        }
+    }
+
+    /**
+     * Scan a URI from the SAF folder picker.
+     */
+    fun scanUri(uri: android.net.Uri) {
+        viewModelScope.launch {
+            gameScanner.scanUri(uri)
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.osemu.app.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -12,12 +11,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.osemu.app.ui.theme.LocalOsEmuExtras
 import java.text.SimpleDateFormat
 import java.util.*
 
 /**
  * 3DS-style top status bar showing time, date, battery, wifi.
+ * Transparent over the gradient background.
  */
 @Composable
 fun StatusBar3DS(
@@ -25,7 +24,6 @@ fun StatusBar3DS(
     batteryLevel: Int = 75,
     wifiConnected: Boolean = true
 ) {
-    val extras = LocalOsEmuExtras.current
     var currentTime by remember { mutableStateOf("") }
     var currentDate by remember { mutableStateOf("") }
 
@@ -43,12 +41,11 @@ fun StatusBar3DS(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(extras.statusBarColor)
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Left: WiFi & connection status
+        // Left: WiFi
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -56,17 +53,9 @@ fun StatusBar3DS(
             Icon(
                 imageVector = if (wifiConnected) Icons.Default.Wifi else Icons.Default.WifiOff,
                 contentDescription = "WiFi",
-                tint = Color.White,
+                tint = Color.White.copy(alpha = 0.9f),
                 modifier = Modifier.size(14.dp)
             )
-            if (wifiConnected) {
-                Text(
-                    text = "Internet",
-                    color = Color.White,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
         }
 
         // Center: Date & Time
@@ -76,29 +65,29 @@ fun StatusBar3DS(
         ) {
             Text(
                 text = currentDate,
-                color = Color.White,
+                color = Color.White.copy(alpha = 0.8f),
                 fontSize = 11.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Normal
             )
             Text(
                 text = currentTime,
                 color = Color.White,
                 fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.SemiBold
             )
         }
 
         // Right: Battery
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             val batteryIcon = if (batteryLevel > 20) Icons.Default.BatteryFull
                 else Icons.Default.BatteryAlert
             Icon(
                 imageVector = batteryIcon,
                 contentDescription = "Battery $batteryLevel%",
-                tint = if (batteryLevel > 20) Color.White else Color(0xFFFF5252),
+                tint = if (batteryLevel > 20) Color.White.copy(alpha = 0.9f) else Color(0xFFFF5252),
                 modifier = Modifier.size(16.dp)
             )
         }

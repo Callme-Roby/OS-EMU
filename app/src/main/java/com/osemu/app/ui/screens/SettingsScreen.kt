@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
 import com.osemu.app.ui.theme.LocalOsEmuExtras
 
 /**
@@ -43,20 +45,33 @@ fun SettingsScreen(
     val extras = LocalOsEmuExtras.current
 
     Column(modifier = modifier.fillMaxSize()) {
-        // Top bar
-        TopAppBar(
-            title = { Text("Settings") },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = extras.statusBarColor,
-                titleContentColor = Color.White,
-                navigationIconContentColor = Color.White
+        // Top bar with gradient
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            extras.topScreenGradientStart,
+                            extras.topScreenGradientEnd
+                        )
+                    )
+                )
+        ) {
+            TopAppBar(
+                title = { Text("Settings") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
+                )
             )
-        )
+        }
 
         LazyColumn(
             contentPadding = PaddingValues(16.dp),

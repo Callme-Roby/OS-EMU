@@ -28,6 +28,7 @@ import com.osemu.app.data.model.Game
 import com.osemu.app.ui.components.*
 import com.osemu.app.ui.theme.LocalOsEmuExtras
 import com.osemu.app.ui.theme.OsEmuColors
+import androidx.compose.ui.graphics.Brush
 
 enum class LibraryViewMode { GRID, LIST }
 
@@ -73,12 +74,20 @@ fun GameLibraryScreen(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        // Top bar
+        // Top bar with gradient
         Surface(
-            color = extras.statusBarColor,
             shadowElevation = 4.dp
         ) {
-            Column {
+            Column(
+                modifier = Modifier.background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            extras.topScreenGradientStart,
+                            extras.topScreenGradientEnd
+                        )
+                    )
+                )
+            ) {
                 // Action bar
                 Row(
                     modifier = Modifier
