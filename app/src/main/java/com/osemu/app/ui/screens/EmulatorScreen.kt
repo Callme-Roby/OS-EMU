@@ -23,15 +23,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.osemu.app.core.EmulatorState
-import com.osemu.app.data.model.Game
+import com.osemu.app.data.model.*
 import com.osemu.app.ui.theme.OsEmuColors
 
 /**
- * Full-screen emulator view with touch overlay controls
- * and an in-game menu for save states and settings.
+ * Full-screen emulator view with console-specific touch controls.
  */
 @Composable
 fun EmulatorScreen(
@@ -52,6 +52,8 @@ fun EmulatorScreen(
     var showSaveSlots by remember { mutableStateOf(false) }
     var saveMode by remember { mutableStateOf(true) }
 
+    val layout = remember(game.console) { ControllerLayouts.forConsole(game.console) }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -69,7 +71,7 @@ fun EmulatorScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.45f)
+                .fillMaxHeight(0.42f)
                 .align(Alignment.TopCenter)
                 .pointerInput(Unit) {
                     detectTapGestures(
@@ -82,12 +84,12 @@ fun EmulatorScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Game render area placeholder
+            // Game render area with console-specific aspect ratio
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .aspectRatio(4f / 3f)
-                    .clip(RoundedCornerShape(8.dp))
+                    .fillMaxWidth(0.92f)
+                    .aspectRatio(layout.screenRatio)
+                    .clip(RoundedCornerShape(6.dp))
                     .background(Color.Black),
                 contentAlignment = Alignment.Center
             ) {
@@ -140,7 +142,6 @@ fun EmulatorScreen(
                         }
                     }
                     else -> {
-                        // Running or Idle - show game info as placeholder
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.padding(16.dp)
@@ -149,17 +150,17 @@ fun EmulatorScreen(
                                 Icons.Default.Star,
                                 contentDescription = null,
                                 tint = OsEmuColors.Blue400.copy(alpha = 0.4f),
-                                modifier = Modifier.size(40.dp)
+                                modifier = Modifier.size(36.dp)
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = game.title,
                                 color = Color.White.copy(alpha = 0.8f),
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.titleSmall,
                                 textAlign = TextAlign.Center,
                                 maxLines = 2
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = game.console.displayName,
                                 color = Color.White.copy(alpha = 0.4f),
@@ -170,12 +171,11 @@ fun EmulatorScreen(
                 }
             }
 
-            // Game title bar below screen
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = game.title,
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 11.sp,
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 10.sp,
                 maxLines = 1
             )
         }
@@ -194,7 +194,7 @@ fun EmulatorScreen(
             )
         }
 
-        // Menu button (top-left, always visible)
+        // Menu button
         IconButton(
             onClick = {
                 showMenu = !showMenu
@@ -211,12 +211,13 @@ fun EmulatorScreen(
             )
         }
 
-        // Touch controls (always visible in bottom portion)
-        TouchOverlay(
+        // Console-specific touch controls
+        ConsoleControls(
+            layout = layout,
             opacity = touchOverlayOpacity.coerceAtLeast(0.4f),
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.55f)
+                .fillMaxHeight(0.58f)
                 .align(Alignment.BottomCenter)
         )
 
@@ -259,6 +260,397 @@ fun EmulatorScreen(
     }
 }
 
+// ==================== Console-Specific Controls ====================
+
+@Composable
+private fun ConsoleControls(
+    layout: ControllerLayout,
+    opacity: Float,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier.alpha(opacity)) {
+
+        // Shoulder buttons (top)
+        if (layout.shoulderButtons.isNotEmpty()) {
+            val leftShoulders = layout.shoulderButtons.filter { it.side == ShoulderSide.LEFT }
+            val rightShoulders = layout.shoulderButtons.filter { it.side == ShoulderSide.RIGHT }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 12.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Left shoulders stacked
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    leftShoulders.forEach { btn ->
+                        ShoulderButton(btn.label)
+                    }
+                }
+                // Right shoulders stacked
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    rightShoulders.forEach { btn ->
+                        ShoulderButton(btn.label)
+                    }
+                }
+            }
+        }
+
+        // D-Pad (bottom-left)
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 16.dp, bottom = 36.dp)
+        ) {
+            DPad()
+        }
+
+        // Analog stick indicator (if console has it)
+        if (layout.analogStick) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 56.dp, top = 8.dp)
+            ) {
+                AnalogStick("L")
+            }
+        }
+
+        // C-Stick / Right analog (if console has it)
+        if (layout.cStick) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 56.dp, top = 8.dp)
+            ) {
+                AnalogStick("R")
+            }
+        }
+
+        // Action buttons (bottom-right) - adapt based on button count
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 36.dp)
+        ) {
+            when (layout.actionButtons.size) {
+                2 -> TwoButtonLayout(layout.actionButtons)
+                4 -> DiamondButtonLayout(layout.actionButtons)
+                6 -> SixButtonLayout(layout.actionButtons)
+                else -> DiamondButtonLayout(layout.actionButtons.take(4))
+            }
+        }
+
+        // Extra buttons (e.g., N64 C-buttons) - placed above main action buttons
+        if (layout.extraButtons.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 16.dp, bottom = 16.dp)
+            ) {
+                DiamondButtonLayout(layout.extraButtons.take(4), buttonSize = 32.dp)
+            }
+        }
+
+        // Center buttons (Start, Select, etc.)
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            layout.centerButtons.forEach { btn ->
+                SmallButton(btn.label)
+            }
+        }
+    }
+}
+
+// ==================== D-Pad ====================
+
+@Composable
+private fun DPad() {
+    Box(
+        modifier = Modifier
+            .size(136.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.06f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            DPadButton("\u25B2")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                DPadButton("\u25C0")
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                )
+                DPadButton("\u25B6")
+            }
+            DPadButton("\u25BC")
+        }
+    }
+}
+
+@Composable
+private fun DPadButton(symbol: String) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(
+                if (isPressed) Color.White.copy(alpha = 0.45f)
+                else Color.White.copy(alpha = 0.22f)
+            )
+            .clickable(interactionSource = interactionSource, indication = null) { },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = symbol, color = Color.White, fontSize = 13.sp)
+    }
+}
+
+// ==================== Action Button Layouts ====================
+
+/**
+ * Two-button layout (GB, GBA, NES, Game Gear, Master System)
+ * Horizontal: [B] [A]  or  [1] [2]
+ */
+@Composable
+private fun TwoButtonLayout(buttons: List<ActionButtonDef>) {
+    Box(
+        modifier = Modifier
+            .size(120.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.06f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Position buttons: LEFT/BOTTOM first, RIGHT second
+            val sorted = buttons.sortedBy {
+                when (it.position) {
+                    ButtonPosition.LEFT, ButtonPosition.BOTTOM -> 0
+                    else -> 1
+                }
+            }
+            sorted.forEach { btn ->
+                ActionButton(
+                    label = btn.label,
+                    color = btn.color,
+                    size = 48.dp
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Diamond layout (SNES, NDS, 3DS, PS1, PSP, etc.)
+ *      [Top]
+ * [Left]   [Right]
+ *    [Bottom]
+ */
+@Composable
+private fun DiamondButtonLayout(
+    buttons: List<ActionButtonDef>,
+    buttonSize: Dp = 40.dp
+) {
+    val top = buttons.find { it.position == ButtonPosition.TOP }
+    val right = buttons.find { it.position == ButtonPosition.RIGHT }
+    val bottom = buttons.find { it.position == ButtonPosition.BOTTOM }
+    val left = buttons.find { it.position == ButtonPosition.LEFT }
+
+    Box(
+        modifier = Modifier
+            .size(buttonSize * 3 + 16.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.06f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            top?.let { ActionButton(it.label, it.color, buttonSize) }
+                ?: Spacer(modifier = Modifier.size(buttonSize))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                left?.let { ActionButton(it.label, it.color, buttonSize) }
+                    ?: Spacer(modifier = Modifier.size(buttonSize))
+
+                Spacer(modifier = Modifier.width(buttonSize - 8.dp))
+
+                right?.let { ActionButton(it.label, it.color, buttonSize) }
+                    ?: Spacer(modifier = Modifier.size(buttonSize))
+            }
+
+            bottom?.let { ActionButton(it.label, it.color, buttonSize) }
+                ?: Spacer(modifier = Modifier.size(buttonSize))
+        }
+    }
+}
+
+/**
+ * Six-button layout (Genesis, Saturn, Arcade)
+ *  [X/4] [Y/5] [Z/6]
+ *  [A/1] [B/2] [C/3]
+ */
+@Composable
+private fun SixButtonLayout(buttons: List<ActionButtonDef>) {
+    val topRow = buttons.filter {
+        it.position in listOf(ButtonPosition.TOP_LEFT, ButtonPosition.TOP, ButtonPosition.TOP_RIGHT)
+    }
+    val bottomRow = buttons.filter {
+        it.position in listOf(ButtonPosition.BOTTOM_LEFT, ButtonPosition.BOTTOM, ButtonPosition.BOTTOM_RIGHT)
+    }
+
+    Box(
+        modifier = Modifier
+            .width(152.dp)
+            .height(108.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White.copy(alpha = 0.06f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                topRow.forEach { btn ->
+                    ActionButton(btn.label, btn.color, 38.dp)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                bottomRow.forEach { btn ->
+                    ActionButton(btn.label, btn.color, 38.dp)
+                }
+            }
+        }
+    }
+}
+
+// ==================== Individual Buttons ====================
+
+@Composable
+private fun ActionButton(label: String, color: Color, size: Dp = 40.dp) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(
+                if (isPressed) color.copy(alpha = 0.9f)
+                else color.copy(alpha = 0.55f)
+            )
+            .clickable(interactionSource = interactionSource, indication = null) { },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = if (label.length > 2) 10.sp else 13.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun AnalogStick(label: String) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    Box(
+        modifier = Modifier
+            .size(56.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.1f))
+            .clickable(interactionSource = interactionSource, indication = null) { },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(
+                    if (isPressed) Color.White.copy(alpha = 0.4f)
+                    else Color.White.copy(alpha = 0.2f)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = label,
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun SmallButton(label: String) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (isPressed) Color.White.copy(alpha = 0.35f)
+                else Color.White.copy(alpha = 0.15f)
+            )
+            .clickable(interactionSource = interactionSource, indication = null) { }
+            .padding(horizontal = 12.dp, vertical = 5.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = if (label.length > 5) 8.sp else 10.sp,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun ShoulderButton(label: String) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 10.dp))
+            .background(
+                if (isPressed) Color.White.copy(alpha = 0.4f)
+                else Color.White.copy(alpha = 0.18f)
+            )
+            .clickable(interactionSource = interactionSource, indication = null) { }
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+// ==================== Menu & Dialogs ====================
+
 @Composable
 private fun InGameMenu(
     game: Game,
@@ -291,7 +683,6 @@ private fun InGameMenu(
                     style = MaterialTheme.typography.titleLarge,
                     maxLines = 1
                 )
-
                 Text(
                     text = game.console.displayName,
                     style = MaterialTheme.typography.bodySmall,
@@ -374,223 +765,4 @@ private fun SaveSlotDialog(
             }
         }
     )
-}
-
-/**
- * On-screen touch controls overlay.
- * D-pad on left, action buttons on right, Start/Select center, L/R top.
- */
-@Composable
-private fun TouchOverlay(
-    opacity: Float,
-    modifier: Modifier = Modifier
-) {
-    Box(modifier = modifier.alpha(opacity)) {
-        // L/R shoulders (top of control area)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            ShoulderButton("L")
-            ShoulderButton("R")
-        }
-
-        // D-Pad (bottom-left)
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 20.dp, bottom = 40.dp)
-        ) {
-            // D-pad background circle
-            Box(
-                modifier = Modifier
-                    .size(140.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.08f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    DPadButton("Up")
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        DPadButton("Left")
-                        // Center dot
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(Color.White.copy(alpha = 0.1f))
-                        )
-                        DPadButton("Right")
-                    }
-                    DPadButton("Down")
-                }
-            }
-        }
-
-        // Action buttons (bottom-right) - diamond layout
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 40.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(140.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.08f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    ActionButton("X", Color(0xFF42A5F5))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        ActionButton("Y", Color(0xFF66BB6A))
-                        Spacer(modifier = Modifier.width(36.dp))
-                        ActionButton("A", Color(0xFFEF5350))
-                    }
-                    ActionButton("B", Color(0xFFFFCA28))
-                }
-            }
-        }
-
-        // Start/Select (bottom-center)
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            SmallButton("SELECT")
-            SmallButton("START")
-        }
-    }
-}
-
-@Composable
-private fun DPadButton(direction: String) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    Box(
-        modifier = Modifier
-            .size(38.dp)
-            .clip(RoundedCornerShape(6.dp))
-            .background(
-                if (isPressed) Color.White.copy(alpha = 0.5f)
-                else Color.White.copy(alpha = 0.25f)
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) { },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = when (direction) {
-                "Up" -> "\u25B2"
-                "Down" -> "\u25BC"
-                "Left" -> "\u25C0"
-                "Right" -> "\u25B6"
-                else -> ""
-            },
-            color = Color.White,
-            fontSize = 14.sp
-        )
-    }
-}
-
-@Composable
-private fun ActionButton(label: String, color: Color) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    Box(
-        modifier = Modifier
-            .size(42.dp)
-            .clip(CircleShape)
-            .background(
-                if (isPressed) color.copy(alpha = 0.9f)
-                else color.copy(alpha = 0.55f)
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) { },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-private fun SmallButton(label: String) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                if (isPressed) Color.White.copy(alpha = 0.35f)
-                else Color.White.copy(alpha = 0.18f)
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) { }
-            .padding(horizontal = 14.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            color = Color.White,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
-private fun ShoulderButton(label: String) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp))
-            .background(
-                if (isPressed) Color.White.copy(alpha = 0.4f)
-                else Color.White.copy(alpha = 0.2f)
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) { }
-            .padding(horizontal = 32.dp, vertical = 10.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
 }
