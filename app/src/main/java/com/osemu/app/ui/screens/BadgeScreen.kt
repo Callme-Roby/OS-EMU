@@ -95,7 +95,7 @@ fun BadgeScreen(
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     LinearProgressIndicator(
-                        progress = { unlockedCount.toFloat() / badges.size.coerceAtLeast(1) },
+                        progress = unlockedCount.toFloat() / badges.size.coerceAtLeast(1),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(6.dp),
