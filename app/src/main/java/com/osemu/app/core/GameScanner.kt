@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.zip.ZipFile
 
 /**
  * Scans directories for ROM files and adds them to the game library.
@@ -47,15 +48,21 @@ class GameScanner(
             var added = 0
             for ((index, file) in romFiles.withIndex()) {
                 val ext = file.extension.lowercase()
-                val consoles = Console.fromExtension(ext)
 
-                if (consoles.isNotEmpty()) {
+                // For zip files, peek inside to detect actual console
+                val detectedConsoles = if (ext == "zip") {
+                    detectConsoleFromZip(file)
+                } else {
+                    Console.fromExtension(ext)
+                }
+
+                if (detectedConsoles.isNotEmpty()) {
                     val existingGame = gameRepository.getGameByPath(file.absolutePath)
                     if (existingGame == null) {
                         val game = Game(
                             title = cleanRomName(file.nameWithoutExtension),
                             filePath = file.absolutePath,
-                            console = consoles.first(),
+                            console = detectedConsoles.first(),
                             fileSize = file.length()
                         )
                         gameRepository.addGame(game)
@@ -101,16 +108,22 @@ class GameScanner(
             } else {
                 val name = file.name ?: continue
                 val ext = name.substringAfterLast('.', "").lowercase()
-                val consoles = Console.fromExtension(ext)
 
-                if (consoles.isNotEmpty()) {
+                // For zip files via SAF, try to detect console from zip contents
+                val detectedConsoles = if (ext == "zip") {
+                    detectConsoleFromSafZip(file) ?: Console.fromExtension(ext)
+                } else {
+                    Console.fromExtension(ext)
+                }
+
+                if (detectedConsoles.isNotEmpty()) {
                     val filePath = file.uri.toString()
                     val existing = gameRepository.getGameByPath(filePath)
                     if (existing == null) {
                         val game = Game(
                             title = cleanRomName(name.substringBeforeLast('.')),
                             filePath = filePath,
-                            console = consoles.first(),
+                            console = detectedConsoles.first(),
                             fileSize = file.length()
                         )
                         gameRepository.addGame(game)
@@ -127,10 +140,61 @@ class GameScanner(
                 collectRomFiles(file, results)
             } else {
                 val ext = file.extension.lowercase()
-                if (Console.fromExtension(ext).isNotEmpty()) {
+                // Include .zip files - we'll inspect them later to detect the console
+                if (ext == "zip" || Console.fromExtension(ext).isNotEmpty()) {
                     results.add(file)
                 }
             }
+        }
+    }
+
+    /**
+     * Opens a zip file and checks the extensions of files inside
+     * to determine which console the ROM belongs to.
+     * This allows ROMs stored as .zip (like My Boy GBA, etc.) to be detected.
+     */
+    private fun detectConsoleFromZip(file: File): List<Console> {
+        return try {
+            ZipFile(file).use { zip ->
+                val entries = zip.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    if (!entry.isDirectory) {
+                        val entryExt = entry.name.substringAfterLast('.', "").lowercase()
+                        val consoles = Console.fromExtension(entryExt)
+                        if (consoles.isNotEmpty()) {
+                            return@use consoles
+                        }
+                    }
+                }
+                // If no ROM extension found inside, fall back to ARCADE mapping
+                Console.fromExtension("zip")
+            }
+        } catch (e: Exception) {
+            // If zip can't be read, fall back to extension-based detection
+            Console.fromExtension("zip")
+        }
+    }
+
+    /**
+     * For SAF-accessed zip files, copy to temp to inspect contents.
+     * Returns null if inspection fails (caller falls back to extension-based).
+     */
+    private fun detectConsoleFromSafZip(documentFile: DocumentFile): List<Console>? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(documentFile.uri) ?: return null
+            val tempFile = File.createTempFile("rom_inspect", ".zip", context.cacheDir)
+            try {
+                tempFile.outputStream().use { out ->
+                    inputStream.copyTo(out)
+                }
+                val result = detectConsoleFromZip(tempFile)
+                result.ifEmpty { null }
+            } finally {
+                tempFile.delete()
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 
