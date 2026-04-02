@@ -292,21 +292,33 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     // --- Scanning ---
     fun scanDefaultPaths() {
         viewModelScope.launch {
-            val storage = Environment.getExternalStorageDirectory().absolutePath
-            val defaultPaths = listOf(
-                "$storage/Roms", "$storage/ROMs", "$storage/roms",
-                "$storage/Download", "$storage/Download/Roms", "$storage/Download/ROMs",
-                "$storage/Downloads", "$storage/Downloads/Roms", "$storage/Downloads/ROMs",
-                "$storage/RetroArch/roms", "$storage/RetroArch/ROMs",
-                "$storage/Games", "$storage/games",
-                "$storage/Emulation", "$storage/Emulation/roms",
-                "$storage/Documents/Roms", "$storage/Documents/ROMs"
-            )
-            for (path in defaultPaths) {
-                if (File(path).exists()) { gameScanner.scanDirectory(path) }
-            }
-            if (_uiState.value.totalGameCount == 0 && !_uiState.value.isScanning) {
-                _uiState.update { it.copy(scanStatus = "No ROMs found. Use \"Add ROMs\" to pick a folder.") }
+            try {
+                val storage = Environment.getExternalStorageDirectory().absolutePath
+                val defaultPaths = listOf(
+                    "$storage/Roms", "$storage/ROMs", "$storage/roms",
+                    "$storage/Download", "$storage/Download/Roms", "$storage/Download/ROMs",
+                    "$storage/Downloads", "$storage/Downloads/Roms", "$storage/Downloads/ROMs",
+                    "$storage/RetroArch/roms", "$storage/RetroArch/ROMs",
+                    "$storage/Games", "$storage/games",
+                    "$storage/Emulation", "$storage/Emulation/roms",
+                    "$storage/Documents/Roms", "$storage/Documents/ROMs"
+                )
+                var foundAny = false
+                for (path in defaultPaths) {
+                    try {
+                        if (File(path).exists()) {
+                            gameScanner.scanDirectory(path)
+                            foundAny = true
+                        }
+                    } catch (e: SecurityException) {
+                        // Skip paths we don't have permission to access
+                    }
+                }
+                if (!foundAny && _uiState.value.totalGameCount == 0 && !_uiState.value.isScanning) {
+                    _uiState.update { it.copy(scanStatus = "No ROMs found. Use \"Add ROMs\" to pick a folder.") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(scanStatus = "Scan failed: use \"Add ROMs\" to pick a folder.") }
             }
         }
     }

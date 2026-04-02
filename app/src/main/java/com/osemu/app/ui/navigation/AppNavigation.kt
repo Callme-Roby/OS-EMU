@@ -29,6 +29,7 @@ sealed class Screen(val route: String) {
 fun AppNavigation(
     appViewModel: AppViewModel,
     onPickFolder: () -> Unit,
+    onScanWithPermission: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
@@ -71,7 +72,7 @@ fun AppNavigation(
                 onNavigateToMedia = {
                     navController.navigate(Screen.Media.route)
                 },
-                onScanGames = { appViewModel.scanDefaultPaths() },
+                onScanGames = onScanWithPermission,
                 onPickFolder = onPickFolder,
                 isScanning = uiState.isScanning,
                 scanStatus = uiState.scanStatus,
