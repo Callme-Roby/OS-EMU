@@ -49,7 +49,10 @@ fun AppNavigation(
                 selectedGameIndex = uiState.selectedGameIndex,
                 onGameSelected = { appViewModel.selectGame(it) },
                 onGameLaunched = { game ->
-                    navController.navigate(Screen.Emulator.createRoute(game.id))
+                    // Try external emulator first, fallback to built-in screen
+                    if (!appViewModel.launchExternal(game)) {
+                        navController.navigate(Screen.Emulator.createRoute(game.id))
+                    }
                 },
                 onGameDetail = { game ->
                     navController.navigate(Screen.GameDetail.createRoute(game.id))
@@ -108,7 +111,9 @@ fun AppNavigation(
                 GameDetailScreen(
                     game = game,
                     onPlay = {
-                        navController.navigate(Screen.Emulator.createRoute(game.id))
+                        if (!appViewModel.launchExternal(game)) {
+                            navController.navigate(Screen.Emulator.createRoute(game.id))
+                        }
                     },
                     onToggleFavorite = { appViewModel.toggleFavorite(game) },
                     onSetBoxArt = { /* TODO: Image picker for box art */ },

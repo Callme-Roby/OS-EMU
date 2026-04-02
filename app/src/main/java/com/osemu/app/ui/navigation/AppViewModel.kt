@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.osemu.app.core.EmulatorEngine
 import com.osemu.app.core.EmulatorState
+import com.osemu.app.core.ExternalEmulatorLauncher
 import com.osemu.app.core.GameScanner
 import com.osemu.app.data.database.AppDatabase
 import com.osemu.app.data.model.*
@@ -209,6 +210,16 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             emulatorEngine.loadGame(game.filePath, game.console, config)
             sessionStartTime = System.currentTimeMillis()
         }
+    }
+
+    /**
+     * Launch game with an external emulator app installed on the device.
+     * Returns true if an emulator was found and launched.
+     */
+    fun launchExternal(game: Game): Boolean {
+        return ExternalEmulatorLauncher.launchRom(
+            getApplication(), game.filePath, game.console
+        )
     }
 
     fun pauseEmulator() { emulatorEngine.pause() }
