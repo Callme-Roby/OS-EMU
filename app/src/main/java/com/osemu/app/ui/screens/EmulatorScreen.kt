@@ -1,6 +1,7 @@
 package com.osemu.app.ui.screens
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.opengl.GLSurfaceView
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
