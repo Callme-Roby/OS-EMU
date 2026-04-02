@@ -2,11 +2,13 @@ package com.osemu.app.ui.navigation
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.osemu.app.core.NativeCoreManager
 import com.osemu.app.ui.screens.*
 
 sealed class Screen(val route: String) {
@@ -34,6 +36,25 @@ fun AppNavigation(
 ) {
     val navController = rememberNavController()
     val uiState by appViewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val nativeCoreManager = remember { NativeCoreManager(context) }
+
+    // Heavy consoles that should try external emulators first
+    val launchGame: (com.osemu.app.data.model.Game) -> Unit = remember(navController) {
+        { game ->
+            if (nativeCoreManager.needsNativeCore(game.console)) {
+                // Try external emulator first for heavy consoles
+                val launched = appViewModel.launchExternal(game)
+                if (!launched) {
+                    // No external emulator found - fall back to internal (native core download)
+                    navController.navigate(Screen.Emulator.createRoute(game.id))
+                }
+            } else {
+                // Light consoles: use internal EmulatorJS WebView
+                navController.navigate(Screen.Emulator.createRoute(game.id))
+            }
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -48,9 +69,7 @@ fun AppNavigation(
                 totalGameCount = uiState.totalGameCount,
                 selectedGameIndex = uiState.selectedGameIndex,
                 onGameSelected = { appViewModel.selectGame(it) },
-                onGameLaunched = { game ->
-                    navController.navigate(Screen.Emulator.createRoute(game.id))
-                },
+                onGameLaunched = launchGame,
                 onGameDetail = { game ->
                     navController.navigate(Screen.GameDetail.createRoute(game.id))
                 },
@@ -107,9 +126,7 @@ fun AppNavigation(
             if (game != null) {
                 GameDetailScreen(
                     game = game,
-                    onPlay = {
-                        navController.navigate(Screen.Emulator.createRoute(game.id))
-                    },
+                    onPlay = { launchGame(game) },
                     onToggleFavorite = { appViewModel.toggleFavorite(game) },
                     onSetBoxArt = { /* TODO: Image picker for box art */ },
                     onAddToCollection = {

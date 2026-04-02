@@ -468,7 +468,18 @@ private fun BottomScreen(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                items(gridItems, key = { it.id }) { item ->
+                items(
+                    items = gridItems,
+                    key = { it.id },
+                    span = { item ->
+                        val spanCount = if (item is GridItem.GameIcon && item.isCurrentlyPlaying && columns >= 2) {
+                            2
+                        } else {
+                            1
+                        }
+                        GridItemSpan(spanCount)
+                    }
+                ) { item ->
                     when (item) {
                         is GridItem.GameIcon -> {
                             WiiUGameTile(
@@ -604,8 +615,8 @@ private fun WiiUGameTile(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f)
-            .shadow(2.dp, shape)
+            .aspectRatio(if (isCurrentlyPlaying) 2f else 1f)
+            .shadow(if (isCurrentlyPlaying) 4.dp else 2.dp, shape)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
