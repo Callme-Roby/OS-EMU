@@ -24,6 +24,7 @@ object EmulatorJSEngine {
         Console.NDS -> "melonds"
         Console.N3DS -> "citra"
         Console.PS1 -> "pcsx_rearmed"
+        Console.PS2 -> "pcsx2"
         Console.PSP -> "ppsspp"
         Console.GENESIS -> "genesis_plus_gx"
         Console.MASTER_SYSTEM -> "genesis_plus_gx"
