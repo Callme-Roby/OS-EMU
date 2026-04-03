@@ -57,6 +57,12 @@ fun EmulatorScreen(
     val context = LocalContext.current
     val coreManager = remember { NativeCoreManager(context) }
     val useNative = remember(game.console) { coreManager.needsNativeCore(game.console) }
+    var hasError by remember { mutableStateOf(false) }
+
+    if (hasError) {
+        ErrorScreen(game, onExit)
+        return
+    }
 
     if (useNative) {
         NativeEmulatorScreen(
@@ -69,6 +75,7 @@ fun EmulatorScreen(
         WebViewEmulatorScreen(
             game = game,
             onExit = onExit,
+            onError = { hasError = true },
             modifier = modifier
         )
     }
@@ -81,6 +88,7 @@ fun EmulatorScreen(
 private fun WebViewEmulatorScreen(
     game: Game,
     onExit: () -> Unit,
+    onError: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -90,29 +98,37 @@ private fun WebViewEmulatorScreen(
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     val server = remember { LocalWebServer() }
     var serverUrl by remember { mutableStateOf<String?>(null) }
+    var loadFailed by remember { mutableStateOf(false) }
 
     LaunchedEffect(game.id) {
-        withContext(Dispatchers.IO) {
-            loadingStatus = "Preparing ROM..."
-            val romFile = EmulatorJSEngine.prepareRomFile(context, game.filePath)
-            if (romFile != null) {
-                loadingStatus = "Starting emulator..."
-                val html = EmulatorJSEngine.generateEmulatorHtml(romFile.name, game.console)
-                server.setContent(html, romFile)
-                server.start()
-                var retries = 0
-                while (server.actualPort == 0 && retries < 20) {
-                    kotlinx.coroutines.delay(50)
-                    retries++
-                }
-                if (server.actualPort > 0) {
-                    serverUrl = "http://127.0.0.1:${server.actualPort}/"
+        try {
+            withContext(Dispatchers.IO) {
+                loadingStatus = "Preparing ROM..."
+                val romFile = EmulatorJSEngine.prepareRomFile(context, game.filePath)
+                if (romFile != null) {
+                    loadingStatus = "Starting emulator..."
+                    val html = EmulatorJSEngine.generateEmulatorHtml(romFile.name, game.console)
+                    server.setContent(html, romFile)
+                    server.start()
+                    var retries = 0
+                    while (server.actualPort == 0 && retries < 20) {
+                        kotlinx.coroutines.delay(50)
+                        retries++
+                    }
+                    if (server.actualPort > 0) {
+                        serverUrl = "http://127.0.0.1:${server.actualPort}/"
+                    } else {
+                        loadingStatus = "Failed to start local server"
+                        loadFailed = true
+                    }
                 } else {
-                    loadingStatus = "Failed to start local server"
+                    loadingStatus = "Could not load ROM file"
+                    loadFailed = true
                 }
-            } else {
-                loadingStatus = "Could not load ROM file"
             }
+        } catch (e: Exception) {
+            loadingStatus = "Error: ${e.message}"
+            loadFailed = true
         }
     }
 
@@ -167,7 +183,38 @@ private fun WebViewEmulatorScreen(
         }
 
         // Loading overlay
-        EmulatorLoadingOverlay(isLoading, game, loadingStatus)
+        if (!loadFailed) {
+            EmulatorLoadingOverlay(isLoading, game, loadingStatus)
+        }
+
+        // Error state - ROM could not be loaded
+        if (loadFailed) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(Color(0xFF1a1a2e)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.Warning, null, tint = OsEmuColors.Yellow,
+                        modifier = Modifier.size(48.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Could not load game", color = Color.White,
+                        fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(loadingStatus, color = Color.White.copy(alpha = 0.5f),
+                        fontSize = 12.sp, textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = {
+                        server.stop()
+                        webViewRef?.destroy()
+                        webViewRef = null
+                        onExit()
+                    }, shape = RoundedCornerShape(12.dp)) {
+                        Text("Go Back")
+                    }
+                }
+            }
+        }
 
         // Exit button
         ExitButton(

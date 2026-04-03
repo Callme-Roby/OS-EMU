@@ -39,23 +39,6 @@ fun AppNavigation(
     val context = LocalContext.current
     val nativeCoreManager = remember { NativeCoreManager(context) }
 
-    // Heavy consoles that should try external emulators first
-    val launchGame: (com.osemu.app.data.model.Game) -> Unit = remember(navController) {
-        { game ->
-            if (nativeCoreManager.needsNativeCore(game.console)) {
-                // Try external emulator first for heavy consoles
-                val launched = appViewModel.launchExternal(game)
-                if (!launched) {
-                    // No external emulator found - fall back to internal (native core download)
-                    navController.navigate(Screen.Emulator.createRoute(game.id))
-                }
-            } else {
-                // Light consoles: use internal EmulatorJS WebView
-                navController.navigate(Screen.Emulator.createRoute(game.id))
-            }
-        }
-    }
-
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route,
@@ -69,7 +52,20 @@ fun AppNavigation(
                 totalGameCount = uiState.totalGameCount,
                 selectedGameIndex = uiState.selectedGameIndex,
                 onGameSelected = { appViewModel.selectGame(it) },
-                onGameLaunched = launchGame,
+                onGameLaunched = { game ->
+                    try {
+                        if (nativeCoreManager.needsNativeCore(game.console)) {
+                            val launched = appViewModel.launchExternal(game)
+                            if (!launched) {
+                                navController.navigate(Screen.Emulator.createRoute(game.id))
+                            }
+                        } else {
+                            navController.navigate(Screen.Emulator.createRoute(game.id))
+                        }
+                    } catch (e: Exception) {
+                        navController.navigate(Screen.Emulator.createRoute(game.id))
+                    }
+                },
                 onGameDetail = { game ->
                     navController.navigate(Screen.GameDetail.createRoute(game.id))
                 },
@@ -126,7 +122,20 @@ fun AppNavigation(
             if (game != null) {
                 GameDetailScreen(
                     game = game,
-                    onPlay = { launchGame(game) },
+                    onPlay = {
+                        try {
+                            if (nativeCoreManager.needsNativeCore(game.console)) {
+                                val launched = appViewModel.launchExternal(game)
+                                if (!launched) {
+                                    navController.navigate(Screen.Emulator.createRoute(game.id))
+                                }
+                            } else {
+                                navController.navigate(Screen.Emulator.createRoute(game.id))
+                            }
+                        } catch (e: Exception) {
+                            navController.navigate(Screen.Emulator.createRoute(game.id))
+                        }
+                    },
                     onToggleFavorite = { appViewModel.toggleFavorite(game) },
                     onSetBoxArt = { /* TODO: Image picker for box art */ },
                     onAddToCollection = {

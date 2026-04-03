@@ -69,6 +69,7 @@ fun HomeScreen(
     onNavigateToMedia: () -> Unit,
     onScanGames: () -> Unit,
     onPickFolder: () -> Unit,
+    onAddGames: () -> Unit = onPickFolder,
     isScanning: Boolean,
     scanStatus: String,
     badges: List<Badge>,
@@ -114,6 +115,7 @@ fun HomeScreen(
             onNavigateToMedia = onNavigateToMedia,
             onScanGames = onScanGames,
             onPickFolder = onPickFolder,
+            onAddGames = onAddGames,
             isScanning = isScanning,
             scanStatus = scanStatus,
             modifier = modifier
@@ -163,6 +165,7 @@ fun HomeScreen(
                 onNavigateToMedia = onNavigateToMedia,
                 onScanGames = onScanGames,
                 onPickFolder = onPickFolder,
+                onAddGames = onAddGames,
                 isScanning = isScanning,
                 scanStatus = scanStatus,
                 modifier = Modifier
@@ -376,6 +379,7 @@ private fun BottomScreen(
     onNavigateToMedia: () -> Unit,
     onScanGames: () -> Unit,
     onPickFolder: () -> Unit,
+    onAddGames: () -> Unit,
     isScanning: Boolean,
     scanStatus: String,
     modifier: Modifier = Modifier
@@ -455,8 +459,8 @@ private fun BottomScreen(
                 }
             }
         } else {
-            // Build grid items: currently playing (2 cells) + games + decorative icons
-            val gridItems = buildGridItems(allGames, currentlyPlaying)
+            // Build grid items: currently playing (2 cells) + games + "+" + decorative icons
+            val gridItems = buildGridItems(allGames, currentlyPlaying, onAddGames)
             val columns = gridRows.coerceIn(1, 5)
 
             LazyVerticalGrid(
@@ -500,6 +504,9 @@ private fun BottomScreen(
                                 onClick = item.onClick
                             )
                         }
+                        is GridItem.AddIcon -> {
+                            WiiUAddTile(onClick = item.onClick)
+                        }
                     }
                 }
             }
@@ -528,13 +535,13 @@ private fun WiiUNavBar(
     ) {
         // LB button
         Surface(
-            color = Color.Gray.copy(alpha = 0.15f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f),
             shape = RoundedCornerShape(4.dp),
             modifier = Modifier.clickable {
                 onGridRowsChange((gridRows - 1).coerceIn(1, 5))
             }
         ) {
-            Text("LB", fontSize = 9.sp, color = Color.Gray,
+            Text("LB", fontSize = 9.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
         }
 
@@ -559,13 +566,13 @@ private fun WiiUNavBar(
 
         // RB button
         Surface(
-            color = Color.Gray.copy(alpha = 0.15f),
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f),
             shape = RoundedCornerShape(4.dp),
             modifier = Modifier.clickable {
                 onGridRowsChange((gridRows + 1).coerceIn(1, 5))
             }
         ) {
-            Text("RB", fontSize = 9.sp, color = Color.Gray,
+            Text("RB", fontSize = 9.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
         }
 
@@ -724,6 +731,49 @@ private fun WiiUDecoTile(
     }
 }
 
+// ==================== ADD TILE ====================
+
+@Composable
+private fun WiiUAddTile(onClick: () -> Unit) {
+    val shape = RoundedCornerShape(10.dp)
+
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .shadow(1.dp, shape),
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .border(
+                    2.dp,
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                    shape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Default.Add,
+                    "Add games",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    "Add",
+                    fontSize = 9.sp,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                )
+            }
+        }
+    }
+}
+
 // ==================== GRID ITEM MODEL ====================
 
 private sealed class GridItem(val id: String) {
@@ -738,15 +788,20 @@ private sealed class GridItem(val id: String) {
         val color: Color,
         val onClick: () -> Unit
     ) : GridItem("deco_$label")
+
+    data class AddIcon(
+        val onClick: () -> Unit
+    ) : GridItem("add_games")
 }
 
 /**
  * Builds the grid with: currently playing game first, then other games,
- * then decorative system icons (Shop, Mii, etc.)
+ * then "+" add tile, then decorative system icons (Shop, Mii, etc.)
  */
 private fun buildGridItems(
     allGames: List<Game>,
-    currentlyPlaying: Game?
+    currentlyPlaying: Game?,
+    onAddGames: () -> Unit
 ): List<GridItem> {
     val items = mutableListOf<GridItem>()
 
@@ -759,6 +814,9 @@ private fun buildGridItems(
     allGames.filter { it.id != currentlyPlaying?.id }.forEach { game ->
         items.add(GridItem.GameIcon(game, isCurrentlyPlaying = false))
     }
+
+    // "+" tile to add more games
+    items.add(GridItem.AddIcon(onAddGames))
 
     // Decorative system icons (non-functional, like Wii U)
     items.add(GridItem.DecoIcon(Icons.Default.ShoppingCart, "Shop", Color(0xFFFF9800)) {})
