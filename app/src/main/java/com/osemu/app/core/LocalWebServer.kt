@@ -10,8 +10,8 @@ import java.net.Socket
 import java.util.concurrent.Executors
 
 /**
- * Minimal local HTTP server to serve ROM files and HTML to the WebView.
- * Runs on localhost so only the app can access it.
+ * Minimal local HTTP server to serve ROM files, HTML, and EmulatorJS
+ * data files to the WebView. Runs on localhost so only the app can access it.
  */
 class LocalWebServer(private val port: Int = 0) {
 
@@ -24,10 +24,19 @@ class LocalWebServer(private val port: Int = 0) {
 
     private var htmlContent: String = ""
     private var romFile: File? = null
+    private var staticDir: File? = null
 
     fun setContent(html: String, rom: File?) {
         htmlContent = html
         romFile = rom
+    }
+
+    /**
+     * Sets the directory from which /data/* requests are served.
+     * Used for locally cached EmulatorJS files.
+     */
+    fun setStaticDir(dir: File?) {
+        staticDir = dir
     }
 
     fun start() {
@@ -85,6 +94,9 @@ class LocalWebServer(private val port: Int = 0) {
                 path.startsWith("/rom/") -> {
                     serveRom(socket)
                 }
+                path.startsWith("/data/") -> {
+                    serveStaticFile(socket, path.removePrefix("/data/"))
+                }
                 else -> {
                     serve404(socket)
                 }
@@ -138,6 +150,65 @@ class LocalWebServer(private val port: Int = 0) {
             }
         }
         out.flush()
+    }
+
+    /**
+     * Serves a static file from the EmulatorJS data directory.
+     * Path traversal is prevented by checking the canonical path.
+     */
+    private fun serveStaticFile(socket: Socket, relativePath: String) {
+        val dir = staticDir
+        if (dir == null || !dir.exists()) {
+            serve404(socket)
+            return
+        }
+
+        // Prevent path traversal
+        val requestedFile = File(dir, relativePath)
+        if (!requestedFile.canonicalPath.startsWith(dir.canonicalPath)) {
+            serve404(socket)
+            return
+        }
+
+        if (!requestedFile.exists() || !requestedFile.isFile) {
+            serve404(socket)
+            return
+        }
+
+        val contentType = guessContentType(relativePath)
+        val out = socket.getOutputStream()
+        val header = buildString {
+            append("HTTP/1.1 200 OK\r\n")
+            append("Content-Type: $contentType\r\n")
+            append("Content-Length: ${requestedFile.length()}\r\n")
+            append("Access-Control-Allow-Origin: *\r\n")
+            append("Cache-Control: public, max-age=31536000\r\n")
+            append("Connection: close\r\n")
+            append("\r\n")
+        }
+        out.write(header.toByteArray())
+
+        FileInputStream(requestedFile).use { input ->
+            val buffer = ByteArray(8192)
+            var bytesRead: Int
+            while (input.read(buffer).also { bytesRead = it } != -1) {
+                out.write(buffer, 0, bytesRead)
+            }
+        }
+        out.flush()
+    }
+
+    private fun guessContentType(path: String): String {
+        return when {
+            path.endsWith(".js") -> "application/javascript"
+            path.endsWith(".css") -> "text/css"
+            path.endsWith(".wasm") -> "application/wasm"
+            path.endsWith(".json") -> "application/json"
+            path.endsWith(".png") -> "image/png"
+            path.endsWith(".svg") -> "image/svg+xml"
+            path.endsWith(".html") -> "text/html"
+            else -> "application/octet-stream"
+        }
     }
 
     private fun serve404(socket: Socket) {

@@ -116,9 +116,17 @@ object EmulatorJSEngine {
 
     /**
      * Generates the HTML page that loads EmulatorJS with the game.
+     * Uses local server paths if EmulatorJS data is cached,
+     * otherwise falls back to CDN.
      */
-    fun generateEmulatorHtml(romFileName: String, console: Console): String {
+    fun generateEmulatorHtml(romFileName: String, console: Console, useLocalData: Boolean = false): String {
         val core = getCoreForConsole(console)
+
+        // When local data is available, load from our LocalWebServer at /data/
+        // Otherwise fall back to the CDN
+        val dataPath = if (useLocalData) "/data/" else "https://cdn.emulatorjs.org/stable/data/"
+        val loaderSrc = if (useLocalData) "/data/loader.js" else "https://cdn.emulatorjs.org/stable/data/loader.js"
+        val loadingText = if (useLocalData) "Loading $core core (local)" else "Downloading $core core"
 
         return """
 <!DOCTYPE html>
@@ -169,7 +177,7 @@ object EmulatorJSEngine {
     <div id="loading">
         <div class="spinner"></div>
         <div class="title">Loading game...</div>
-        <div class="text">Downloading $core core</div>
+        <div class="text">$loadingText</div>
     </div>
     <div id="game"></div>
     <script>
@@ -177,7 +185,7 @@ object EmulatorJSEngine {
         EJS_player = '#game';
         EJS_core = '$core';
         EJS_gameUrl = '/rom/$romFileName';
-        EJS_pathtodata = 'https://cdn.emulatorjs.org/stable/data/';
+        EJS_pathtodata = '$dataPath';
         EJS_startOnLoaded = true;
         EJS_fullscreenOnLoaded = false;
         EJS_color = '#1976D2';
@@ -190,7 +198,7 @@ object EmulatorJSEngine {
             if (loading) loading.style.display = 'none';
         };
     </script>
-    <script src="https://cdn.emulatorjs.org/stable/data/loader.js"></script>
+    <script src="$loaderSrc"></script>
 </body>
 </html>
 """.trimIndent()

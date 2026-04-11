@@ -93,22 +93,37 @@ private fun WebViewEmulatorScreen(
 ) {
     val context = LocalContext.current
     var isLoading by remember { mutableStateOf(true) }
-    var loadingStatus by remember { mutableStateOf("Preparing ROM...") }
+    var loadingStatus by remember { mutableStateOf("Preparing...") }
     var showExitConfirm by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     val server = remember { LocalWebServer() }
     var serverUrl by remember { mutableStateOf<String?>(null) }
     var loadFailed by remember { mutableStateOf(false) }
+    val ejsDataManager = remember { EmulatorJSDataManager(context) }
 
     LaunchedEffect(game.id) {
         try {
             withContext(Dispatchers.IO) {
+                // Step 1: Ensure EmulatorJS data is installed locally
+                val useLocal = if (ejsDataManager.isInstalled()) {
+                    true
+                } else {
+                    loadingStatus = "Downloading emulator engine (one-time)..."
+                    ejsDataManager.downloadAndInstall()
+                }
+
+                // Step 2: Prepare ROM file
                 loadingStatus = "Preparing ROM..."
                 val romFile = EmulatorJSEngine.prepareRomFile(context, game.filePath)
                 if (romFile != null) {
                     loadingStatus = "Starting emulator..."
-                    val html = EmulatorJSEngine.generateEmulatorHtml(romFile.name, game.console)
+                    val html = EmulatorJSEngine.generateEmulatorHtml(
+                        romFile.name, game.console, useLocalData = useLocal
+                    )
                     server.setContent(html, romFile)
+                    if (useLocal) {
+                        server.setStaticDir(ejsDataManager.getDataDir())
+                    }
                     server.start()
                     var retries = 0
                     while (server.actualPort == 0 && retries < 20) {
